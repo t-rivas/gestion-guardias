@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio | Gestión de guardias{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Panel general</p>
+        <h1>Gestión de guardias</h1>
+        <p class="page-description">Administrá las personas y su disponibilidad mensual desde un único lugar.</p>
+    </div>
+</header>
+
+<section class="dashboard-grid" aria-label="Secciones principales">
+    <a class="dashboard-card" href="/personas">
+        <span class="card-icon card-icon-blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3"></circle>
+                <path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M16 5.5a3 3 0 0 1 0 5.8M17 14c2.2.7 3.4 2.7 3.7 6"></path>
+            </svg>
+        </span>
+        <span class="card-content">
+            <strong>Personas</strong>
+            <small>Altas, observaciones y estado de cada integrante.</small>
+        </span>
+        <span class="card-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="dashboard-card" href="/disponibilidad">
+        <span class="card-icon card-icon-green" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                <path d="M7 3v4M17 3v4M3 10h18M8 15l2.2 2.2L16 12"></path>
+            </svg>
+        </span>
+        <span class="card-content">
+            <strong>Disponibilidad</strong>
+            <small>Registro mensual de días disponibles por persona.</small>
+        </span>
+        <span class="card-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="dashboard-card" href="/calendario">
+        <span class="card-icon card-icon-violet" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                <path d="M7 3v4M17 3v4M3 10h18M7 14h2M11 14h2M15 14h2M7 18h2M11 18h2M15 18h2"></path>
+            </svg>
+        </span>
+        <span class="card-content">
+            <strong>Calendario de guardias</strong>
+            <small>Generación aleatoria y consulta del cronograma mensual.</small>
+        </span>
+        <span class="card-arrow" aria-hidden="true">→</span>
+    </a>
+</section>
+
+<section class="info-panel">
+    <div class="info-panel-icon" aria-hidden="true">i</div>
+    <div>
+        <h2>Flujo de trabajo</h2>
+        <p>Primero cargá las personas del equipo y luego marcá sus días no disponibles en la grilla mensual.</p>
+    </div>
+</section>
+{% endblock %}

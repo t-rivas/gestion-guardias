@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Tooling and editor files
+.agents/
+.codex/
+.idea/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Local development notes
+notes

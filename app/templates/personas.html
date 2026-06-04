@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Personas | Gestión de guardias{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Equipo</p>
+        <h1>Personas</h1>
+        <p class="page-description">Gestioná quiénes participan en la planificación mensual de guardias.</p>
+    </div>
+    <div class="summary-pill">
+        <strong>{{ people|length }}</strong>
+        <span>personas registradas</span>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>Agregar persona</h2>
+            <p>Ingresá los datos básicos para incluir a alguien en el sistema.</p>
+        </div>
+    </div>
+
+    <form class="person-form" method="post" action="/personas">
+        <input type="hidden" name="sort" value="{{ selected_sort }}">
+        <label class="field">
+            <span>Nombre completo</span>
+            <input type="text" name="full_name" placeholder="Ej. María González" required>
+        </label>
+
+        <label class="field field-grow">
+            <span>Observaciones <small>(opcional)</small></span>
+            <input type="text" name="notes" placeholder="Ej. No realiza guardias los viernes">
+        </label>
+
+        <button class="button button-primary form-submit" type="submit">Agregar persona</button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header panel-header-with-actions">
+        <div>
+            <h2>Listado de personas</h2>
+            <p>Desactivar conserva el historial. Eliminar borra definitivamente a la persona y sus datos asociados.</p>
+        </div>
+        <div class="sort-controls" aria-label="Ordenar personas">
+            <span>Ordenar:</span>
+            <a class="sort-link {% if selected_sort == 'name_asc' %}is-active{% endif %}" href="/personas?sort=name_asc">A-Z</a>
+            <a class="sort-link {% if selected_sort == 'name_desc' %}is-active{% endif %}" href="/personas?sort=name_desc">Z-A</a>
+        </div>
+    </div>
+
+    {% if people %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Observaciones</th>
+                    <th>Estado</th>
+                    <th class="table-actions">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in people %}
+                <tr>
+                    <td>
+                        <div class="person-cell">
+                            <span class="person-avatar">{{ person.full_name[:1]|upper }}</span>
+                            <strong>{{ person.full_name }}</strong>
+                        </div>
+                    </td>
+                    <td class="notes-cell">
+                        {{ person.notes or "Sin observaciones" }}
+                    </td>
+                    <td>
+                        {% if person.active %}
+                        <span class="badge badge-active"><span class="badge-dot"></span>Activa</span>
+                        {% else %}
+                        <span class="badge badge-inactive"><span class="badge-dot"></span>Inactiva</span>
+                        {% endif %}
+                    </td>
+                    <td class="table-actions">
+                        <div class="table-action-group">
+                            {% if person.active %}
+                            <form method="post" action="/personas/{{ person.id }}/desactivar">
+                                <input type="hidden" name="sort" value="{{ selected_sort }}">
+                                <button class="button button-warning button-small" type="submit">Desactivar</button>
+                            </form>
+                            {% else %}
+                            <form method="post" action="/personas/{{ person.id }}/activar">
+                                <input type="hidden" name="sort" value="{{ selected_sort }}">
+                                <button class="button button-success button-small" type="submit">Activar</button>
+                            </form>
+                            {% endif %}
+                            <form
+                                method="post"
+                                action="/personas/{{ person.id }}/eliminar"
+                                onsubmit="return confirm('¿Eliminar definitivamente esta persona? También se borrarán su disponibilidad y guardias asignadas.');"
+                            >
+                                <input type="hidden" name="sort" value="{{ selected_sort }}">
+                                <button class="button button-danger button-icon button-small" type="submit" aria-label="Eliminar persona" title="Eliminar persona">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-state-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3"></circle>
+                <path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6M16 5.5a3 3 0 0 1 0 5.8M17 14c2.2.7 3.4 2.7 3.7 6"></path>
+            </svg>
+        </span>
+        <h3>Todavía no hay personas registradas</h3>
+        <p>Completá el formulario para comenzar a armar el equipo.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
