@@ -1,5 +1,6 @@
 import calendar
 from collections import Counter
+from collections import defaultdict
 from datetime import date
 
 from fastapi import APIRouter, Depends, Form, Query, Request
@@ -14,6 +15,7 @@ from app.models.guard_assignment import GuardAssignment
 from app.models.person import Person
 from app.services.availability_rules import build_availability_sets
 from app.services.availability_rules import is_person_available
+from app.services.schedule_generator import ASSIGNMENT_SLOTS
 from app.services.schedule_generator import generate_monthly_schedule
 
 router = APIRouter()
@@ -45,14 +47,9 @@ def calendar_page(
             GuardAssignment.date >= days[0],
             GuardAssignment.date <= days[-1],
         )
-        .order_by(GuardAssignment.date)
+        .order_by(GuardAssignment.date, GuardAssignment.slot)
         .all()
     )
-    assignment_by_date = {
-        assignment.date: person
-        for assignment, person in assignments
-    }
-
     unavailable = (
         db.query(Availability)
         .filter(
@@ -63,21 +60,46 @@ def calendar_page(
     )
     unavailable_dates, weekend_available_dates = build_availability_sets(unavailable)
 
-    schedule = [
-        {
-            "day": day,
-            "person": assignment_by_date.get(day),
-            "has_conflict": (
-                assignment_by_date.get(day) is not None
-                and (
-                    not assignment_by_date[day].active
+    assignments_by_date = defaultdict(list)
+    for assignment, person in assignments:
+        assignments_by_date[assignment.date].append(
+            {
+                "assignment": assignment,
+                "person": person,
+                "has_conflict": (
+                    not person.active
                     or not is_person_available(
-                        assignment_by_date[day].id,
-                        day,
+                        person.id,
+                        assignment.date,
                         unavailable_dates,
                         weekend_available_dates,
                     )
-                )
+                ),
+            }
+        )
+
+    required_slots_count = len(ASSIGNMENT_SLOTS)
+    schedule = [
+        {
+            "day": day,
+            "assignments": assignments_by_date[day],
+            "primary_assignments": [
+                item
+                for item in assignments_by_date[day]
+                if item["assignment"].role == "primary"
+            ],
+            "substitute_assignment": next(
+                (
+                    item
+                    for item in assignments_by_date[day]
+                    if item["assignment"].role == "substitute"
+                ),
+                None,
+            ),
+            "missing_slots": required_slots_count - len(assignments_by_date[day]),
+            "has_conflict": any(
+                item["has_conflict"]
+                for item in assignments_by_date[day]
             ),
         }
         for day in days
@@ -85,7 +107,7 @@ def calendar_page(
     unassigned_days = [
         item["day"]
         for item in schedule
-        if item["person"] is None
+        if item["missing_slots"] > 0
     ]
     conflict_days = [
         item["day"]
@@ -95,11 +117,21 @@ def calendar_page(
 
     assignment_counts = Counter(
         person.id
-        for _, person in assignments
+        for assignment, person in assignments
+    )
+    primary_assignment_counts = Counter(
+        person.id
+        for assignment, person in assignments
+        if assignment.role == "primary"
+    )
+    substitute_assignment_counts = Counter(
+        person.id
+        for assignment, person in assignments
+        if assignment.role == "substitute"
     )
     assigned_people = {
         person.id: person
-        for _, person in assignments
+        for assignment, person in assignments
     }
     people = (
         db.query(Person)
@@ -116,6 +148,8 @@ def calendar_page(
         {
             "person": person,
             "count": assignment_counts[person.id],
+            "primary_count": primary_assignment_counts[person.id],
+            "substitute_count": substitute_assignment_counts[person.id],
         }
         for person in sorted(
             people_by_id.values(),

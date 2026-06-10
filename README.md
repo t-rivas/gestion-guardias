@@ -2,6 +2,15 @@
 
 Aplicación web interna para administrar personas, registrar disponibilidad mensual y generar un calendario equilibrado de guardias.
 
+## Funcionalidad principal
+
+- Gestión de personas activas e inactivas.
+- Registro mensual de disponibilidad por persona.
+- Generación automática de guardias mensuales.
+- Asignación diaria de hasta 3 personas titulares y 1 suplente.
+- Límite de 2 asignaciones por persona dentro de una misma semana.
+- Detección de días incompletos y conflictos por cambios posteriores de disponibilidad.
+
 ## Stack
 
 - Python 3.12

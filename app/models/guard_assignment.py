@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -9,7 +9,8 @@ from app.db.base import Base
 class GuardAssignment(Base):
     __tablename__ = "guard_assignments"
     __table_args__ = (
-        UniqueConstraint("date", name="uq_guard_assignments_date"),
+        UniqueConstraint("date", "slot", name="uq_guard_assignments_date_slot"),
+        UniqueConstraint("date", "person_id", name="uq_guard_assignments_date_person"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -23,4 +24,15 @@ class GuardAssignment(Base):
         Date,
         nullable=False,
         index=True,
+    )
+
+    role: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="primary",
+    )
+
+    slot: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
     )

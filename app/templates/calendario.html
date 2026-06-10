@@ -15,7 +15,7 @@
     <div class="availability-toolbar calendar-toolbar">
         <div>
             <h2>{{ month_name }} {{ year }}</h2>
-            <p>Una guardia por día · se prioriza repartir las asignaciones de forma equilibrada</p>
+            <p>3 personas y 1 suplente por día · máximo 2 asignaciones por persona cada semana</p>
         </div>
 
         <div class="month-controls">
@@ -58,8 +58,8 @@
 
 {% if (generated or has_assignments) and unassigned_days %}
 <div class="alert alert-warning">
-    <strong>{{ unassigned_days|length }} {% if unassigned_days|length == 1 %}día{% else %}días{% endif %} sin asignar.</strong>
-    <span>No había personas disponibles para: {% for day in unassigned_days %}{{ day.day }}{% if not loop.last %}, {% endif %}{% endfor %}.</span>
+    <strong>{{ unassigned_days|length }} {% if unassigned_days|length == 1 %}día quedó{% else %}días quedaron{% endif %} incompleto{% if unassigned_days|length != 1 %}s{% endif %}.</strong>
+    <span>No había suficientes personas disponibles para: {% for day in unassigned_days %}{{ day.day }}{% if not loop.last %}, {% endif %}{% endfor %}.</span>
 </div>
 {% endif %}
 
@@ -85,7 +85,8 @@
                 <thead>
                     <tr>
                         <th>Fecha</th>
-                        <th>Persona asignada</th>
+                        <th>Personas asignadas</th>
+                        <th>Suplente</th>
                         <th>Estado</th>
                     </tr>
                 </thead>
@@ -99,20 +100,36 @@
                             </div>
                         </td>
                         <td>
-                            {% if item.person %}
-                            <div class="person-cell">
-                                <span class="person-avatar">{{ item.person.full_name[:1]|upper }}</span>
-                                <strong>{{ item.person.full_name }}</strong>
+                            {% if item.primary_assignments %}
+                            <div class="assignment-list">
+                                {% for assignment_item in item.primary_assignments %}
+                                <div class="person-cell">
+                                    <span class="person-avatar">{{ assignment_item.person.full_name[:1]|upper }}</span>
+                                    <strong>{{ assignment_item.person.full_name }}</strong>
+                                </div>
+                                {% endfor %}
                             </div>
                             {% else %}
                             <span class="unassigned-text">Sin asignar</span>
                             {% endif %}
                         </td>
                         <td>
+                            {% if item.substitute_assignment %}
+                            <div class="person-cell">
+                                <span class="person-avatar person-avatar-substitute">{{ item.substitute_assignment.person.full_name[:1]|upper }}</span>
+                                <strong>{{ item.substitute_assignment.person.full_name }}</strong>
+                            </div>
+                            {% else %}
+                            <span class="unassigned-text">Sin suplente</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if item.has_conflict %}
                             <span class="badge badge-warning"><span class="badge-dot"></span>Revisar</span>
-                            {% elif item.person %}
-                            <span class="badge badge-active"><span class="badge-dot"></span>Asignada</span>
+                            {% elif item.missing_slots > 0 and item.assignments %}
+                            <span class="badge badge-inactive"><span class="badge-dot"></span>Parcial</span>
+                            {% elif item.assignments %}
+                            <span class="badge badge-active"><span class="badge-dot"></span>Completa</span>
                             {% else %}
                             <span class="badge badge-inactive"><span class="badge-dot"></span>Pendiente</span>
                             {% endif %}
@@ -142,7 +159,10 @@
                         {% if not item.person.active %}<small>Inactiva</small>{% endif %}
                     </span>
                 </div>
-                <strong class="guard-count">{{ item.count }}</strong>
+                <span class="summary-counts">
+                    <strong class="guard-count">{{ item.count }}</strong>
+                    <small>{{ item.primary_count }} guardias · {{ item.substitute_count }} supl.</small>
+                </span>
             </div>
             {% endfor %}
         </div>

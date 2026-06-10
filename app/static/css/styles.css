@@ -708,6 +708,11 @@ select:focus {
     font-weight: 800;
 }
 
+.person-avatar-substitute {
+    background: #eef6ee;
+    color: #287a47;
+}
+
 .notes-cell {
     color: var(--text-muted);
     font-size: 13px;
@@ -1067,6 +1072,11 @@ thead .person-column {
     width: 112px;
 }
 
+.assignment-list {
+    display: grid;
+    gap: 8px;
+}
+
 .weekend-row td {
     background: #fbfaff;
 }
@@ -1147,6 +1157,19 @@ thead .person-column {
     background: var(--primary-soft);
     color: var(--primary);
     font-size: 12px;
+}
+
+.summary-counts {
+    display: grid;
+    justify-items: end;
+    gap: 3px;
+}
+
+.summary-counts small {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
 .visually-hidden {

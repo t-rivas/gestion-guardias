@@ -57,12 +57,13 @@ Reglas actuales del generador:
 1. Solo considera personas activas.
 2. No asigna personas no disponibles.
 3. No asigna fines de semana salvo que exista una habilitación explícita.
-4. Intenta evitar asignaciones en días consecutivos.
-5. Prioriza personas con menos guardias dentro del mes generado.
-6. Selecciona aleatoriamente entre candidatos con la misma cantidad de guardias.
-7. Mantiene una sola asignación por fecha.
-8. Al regenerar, reemplaza únicamente las asignaciones del mes seleccionado.
-9. Informa días sin candidatos y conflictos por cambios posteriores de disponibilidad o estado.
+4. Asigna hasta 3 personas titulares y 1 suplente por día.
+5. No asigna a la misma persona más de 2 veces dentro de una misma semana ISO.
+6. Intenta evitar asignaciones en días consecutivos cuando hay candidatos suficientes.
+7. Prioriza personas con menos guardias dentro del mes generado.
+8. Selecciona aleatoriamente entre candidatos con la misma cantidad de guardias.
+9. Al regenerar, reemplaza únicamente las asignaciones del mes seleccionado.
+10. Informa días incompletos y conflictos por cambios posteriores de disponibilidad o estado.
 
 ## Modelo de datos
 
@@ -90,14 +91,16 @@ Reglas actuales del generador:
 | --- | --- |
 | `id` | Identificador de la asignación |
 | `person_id` | Persona asignada |
-| `date` | Fecha de la guardia, única en la tabla |
+| `date` | Fecha de la guardia |
+| `role` | Rol de la asignación: `primary` o `substitute` |
+| `slot` | Posición diaria de la asignación, del 1 al 4 |
 
 ## Arquitectura
 
 ```text
 app/
 ├── api/          # Rutas FastAPI y renderizado de páginas
-├── db/           # Base declarativa, engine y sesiones
+├── db/           # Base declarativa, engine, sesiones y actualización puntual de esquema
 ├── models/       # Modelos SQLAlchemy
 ├── services/     # Reglas de disponibilidad y generador
 ├── static/       # CSS y JavaScript
@@ -110,5 +113,5 @@ app/
 - No existe autenticación ni control de permisos.
 - No se consideran feriados.
 - No existe edición manual de asignaciones.
-- No se utilizan migraciones de base de datos.
+- No se utiliza Alembic; existe una actualización puntual de esquema para `guard_assignments`.
 - La aplicación está pensada para uso interno y una única organización.

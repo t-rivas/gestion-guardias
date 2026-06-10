@@ -91,7 +91,15 @@ Abrir:
 http://localhost:8001
 ```
 
-Las tablas se crean automáticamente al iniciar la aplicación.
+Las tablas se crean automáticamente al iniciar la aplicación. En instalaciones existentes, el inicio también aplica la actualización necesaria sobre `guard_assignments` para soportar múltiples asignaciones diarias con rol y posición.
+
+## Actualizar una instalación existente
+
+1. Descargar la última versión del repositorio.
+2. Instalar dependencias si `requirements.txt` cambió.
+3. Iniciar la aplicación normalmente.
+
+Al iniciar, la aplicación agrega las columnas `role` y `slot` a `guard_assignments`, elimina la restricción antigua de una sola asignación por fecha y crea las nuevas restricciones de unicidad por fecha/posición y fecha/persona.
 
 ## Detener los servicios
 
@@ -124,4 +132,4 @@ docker compose logs db
 
 ### Cambios de modelos no aparecen en tablas existentes
 
-El proyecto todavía no utiliza migraciones. `Base.metadata.create_all()` crea tablas faltantes, pero no modifica columnas existentes. Para cambios de esquema se recomienda incorporar Alembic.
+El proyecto no utiliza Alembic. `Base.metadata.create_all()` crea tablas faltantes, pero no modifica columnas existentes. La tabla `guard_assignments` tiene una actualización puntual al iniciar la aplicación; para futuros cambios de esquema se recomienda incorporar Alembic.

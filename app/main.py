@@ -7,6 +7,7 @@ from app.api.calendar import router as calendar_router
 from app.api.people import router as people_router
 from app.db.base import Base
 from app.db.database import engine
+from app.db.schema_migrations import migrate_guard_assignments_schema
 from app.models.availability import Availability
 from app.models.guard_assignment import GuardAssignment
 from app.models.person import Person
@@ -23,6 +24,7 @@ app.include_router(calendar_router)
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+    migrate_guard_assignments_schema(engine)
 
 
 @app.get("/")
