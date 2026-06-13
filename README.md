@@ -2,15 +2,6 @@
 
 A small web app for managing people availability and generating monthly guard schedules.
 
-## What It Does
-
-- Manage active and inactive people.
-- Register each person's monthly availability.
-- Generate a monthly guard calendar automatically.
-- Assign up to 3 primary people and 1 substitute per day.
-- Avoid unavailable days and limit weekly assignments per person.
-- Show incomplete days or conflicts after availability changes.
-
 ## Tech Stack
 
 - Python 3.12
@@ -72,8 +63,6 @@ docker-compose down -v
 ```
 
 If you use Docker Compose v2, you can use `docker compose` instead of `docker-compose`.
-
-If legacy `docker-compose` prints a `watch_events` traceback while running in attached mode, use the detached command above. It is a Compose client issue; the containers can still be checked with `docker-compose ps`.
 
 ## Local Development
 
