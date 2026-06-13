@@ -1,13 +1,26 @@
+version: "2.4"
+
 services:
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-guardias}:${POSTGRES_PASSWORD:-guardias}@db:5432/${POSTGRES_DB:-guardias}
+      SQLALCHEMY_ECHO: ${SQLALCHEMY_ECHO:-false}
+    ports:
+      - "${APP_PORT:-8001}:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
     image: postgres:16
-    container_name: guardias-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-guardias}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-guardias}
       POSTGRES_DB: ${POSTGRES_DB:-guardias}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +28,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres_data:

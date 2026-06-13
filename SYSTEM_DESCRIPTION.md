@@ -4,7 +4,7 @@
 
 Gestión de Guardias es una aplicación interna para organizar guardias mensuales. Permite mantener el equipo, registrar excepciones de disponibilidad y generar una distribución automática de asignaciones.
 
-La interfaz utiliza una identidad visual inspirada en BPS, navegación lateral, modo claro y modo nocturno persistente.
+La interfaz utiliza una navegación lateral, modo claro y modo nocturno persistente.
 
 ## Módulos
 

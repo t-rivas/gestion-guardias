@@ -100,10 +100,6 @@ a {
     background: #ffffff;
     color: #23447c;
     box-shadow: 0 5px 14px rgba(15, 23, 42, 0.25);
-    font-size: 15px;
-    font-style: italic;
-    font-weight: 900;
-    letter-spacing: -0.08em;
 }
 
 .brand strong,
@@ -111,13 +107,25 @@ a {
     display: block;
 }
 
+.brand-mark svg {
+    width: 25px;
+    height: 25px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
 .brand strong {
-    font-size: 15px;
+    max-width: 145px;
+    font-size: 13px;
     letter-spacing: 0.01em;
+    line-height: 1.15;
 }
 
 .brand small {
-    margin-top: 1px;
+    margin-top: 3px;
     color: #94a3b8;
     font-size: 11px;
 }

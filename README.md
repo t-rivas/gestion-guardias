@@ -1,39 +1,100 @@
-# Gestión de Guardias
+# Guard Scheduling App
 
-Aplicación web interna para administrar personas, registrar disponibilidad mensual y generar un calendario equilibrado de guardias.
+A small web app for managing people availability and generating monthly guard schedules.
 
-## Funcionalidad principal
+## What It Does
 
-- Gestión de personas activas e inactivas.
-- Registro mensual de disponibilidad por persona.
-- Generación automática de guardias mensuales.
-- Asignación diaria de hasta 3 personas titulares y 1 suplente.
-- Límite de 2 asignaciones por persona dentro de una misma semana.
-- Detección de días incompletos y conflictos por cambios posteriores de disponibilidad.
+- Manage active and inactive people.
+- Register each person's monthly availability.
+- Generate a monthly guard calendar automatically.
+- Assign up to 3 primary people and 1 substitute per day.
+- Avoid unavailable days and limit weekly assignments per person.
+- Show incomplete days or conflicts after availability changes.
 
-## Stack
+## Tech Stack
 
 - Python 3.12
 - FastAPI
 - SQLAlchemy
-- PostgreSQL 16
+- PostgreSQL
 - Jinja2
-- HTML, CSS y JavaScript vanilla
-- Docker Compose para la base de datos
+- Docker Compose
 
-## Documentación
+## Installation With Docker
 
-- [Guía de instalación](INSTALLATION.md)
-- [Descripción del sistema](SYSTEM_DESCRIPTION.md)
+Requirements:
 
-## Inicio rápido
+- Git
+- Docker
+- Docker Compose
+
+Clone the repository:
 
 ```bash
-docker compose up -d db
+git clone <REPOSITORY_URL>
+cd gestion-guardias
+```
+
+Create the environment file:
+
+```bash
+cp .env.example .env
+```
+
+Start the app in the background:
+
+```bash
+docker-compose up --build -d
+```
+
+Open:
+
+```text
+http://localhost:8001
+```
+
+Check the containers:
+
+```bash
+docker-compose ps
+```
+
+To stop it:
+
+```bash
+docker-compose down
+```
+
+To stop it and delete the local database volume:
+
+```bash
+docker-compose down -v
+```
+
+If you use Docker Compose v2, you can use `docker compose` instead of `docker-compose`.
+
+If legacy `docker-compose` prints a `watch_events` traceback while running in attached mode, use the detached command above. It is a Compose client issue; the containers can still be checked with `docker-compose ps`.
+
+## Local Development
+
+Run PostgreSQL with Docker:
+
+```bash
+docker-compose up -d db
+```
+
+Install Python dependencies:
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8001
 ```
 
-Abrir `http://localhost:8001`.
+Run the app:
+
+```bash
+python run.py
+```
+
+The app will be available at `http://localhost:8001`. The terminal also prints a LAN URL that can be used from another device on the same network.
