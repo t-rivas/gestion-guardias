@@ -1,3 +1,21 @@
+[project]
+name = "gestion-guardias"
+version = "0.1.0"
+requires-python = ">=3.12,<3.15"
+# Keep runtime pins aligned with requirements.txt for local and Docker installs.
+dependencies = [
+    "fastapi==0.136.3",
+    "Jinja2==3.1.6",
+    "psycopg[binary]==3.3.4",
+    "python-multipart==0.0.30",
+    "SQLAlchemy==2.0.50",
+    "uvicorn==0.48.0",
+    "alembic==1.20.0",
+    "itsdangerous==2.2.0",
+    "httpx==0.28.1",
+    "PyJWT[crypto]==2.10.1",
+]
+
 [tool.vercel]
 entrypoint = "app.main:app"
 

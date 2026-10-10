@@ -260,6 +260,27 @@ explicitly approved committing and pushing that full tested app change set to
 `t-rivas/auth-login-flow`. Stage only those reviewed paths, retain ignored secrets
 and backups locally, and verify the branch publication. GitHub main integration
 and the remote runtime configuration remain separate outstanding work.
+Committed the reviewed 72-path app change set as `c4acd90` and pushed
+`t-rivas/auth-login-flow`; verified GitHub's branch SHA matches the local commit.
+GitHub main remains `132b68f`. Vercel attempted a preview build
+(`dpl_F7SxJqFAx757bcz3a2ZBQ3z6eC6Q`) and failed: uv treated `pyproject.toml` as
+the dependency manifest but it lacked a `[project]` table. Added metadata and
+runtime pins matching requirements.txt, and generated uv.lock with the exact
+builder uv version (0.10.11). Fresh locked Python 3.12 installation: 87 passed,
+1 skipped. Manifest fix publication and subsequent build verification are next.
+The user explicitly restricts investigation to their `7h146os-projects` team and
+`gestion-guardias` project; always pass that scope and an explicit project or
+deployment ID. Vercel CLI authenticated during inspection and now gives access
+to this project's build logs. The computer-use helper could not run because
+`Unable to determine Orca.app path from symlink: /usr/local/bin/orca`; no GUI
+actions were performed. Scoped project inspection identifies
+`prj_BSh43i1g68RoUwN9tS4mHlP5koMs`, FastAPI preset, and runtime variables from
+Neon only. App origin, whitelist, session secret and secure-cookie variables are
+missing. Automatic approval review rejected pulling the full production secret
+payload to a local file, citing unapproved production credential copying and
+its broad blast radius. No production credentials were downloaded; continue
+with the manifest fix and scoped non-secret deployment checks. Credentials,
+migrations, sender, user provisioning and authenticated login remain pending.
 
 Browser verification caught and corrected a real form-origin regression:
 `Referrer-Policy: no-referrer` caused browsers to post `Origin: null`. Normal pages
