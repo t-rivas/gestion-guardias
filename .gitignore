@@ -28,3 +28,6 @@ Thumbs.db
 
 # Local development notes
 notes
+
+# Private database backups
+.local-backups/

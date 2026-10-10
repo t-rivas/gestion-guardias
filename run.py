@@ -39,11 +39,17 @@ def env_bool(name: str, default: bool) -> bool:
 if __name__ == "__main__":
     load_env_file(Path(".env"))
 
-    host = os.getenv("APP_HOST", "0.0.0.0")
+    host = os.getenv("APP_HOST", "127.0.0.1")
     port = int(os.getenv("APP_PORT", "8001"))
     reload = env_bool("APP_RELOAD", True)
 
+    from alembic import command
+    from alembic.config import Config
+
+    command.upgrade(Config("alembic.ini"), "head")
+
     print(f"Local: http://127.0.0.1:{port}")
-    print(f"LAN:   http://{get_lan_ip()}:{port}")
+    if host == "0.0.0.0":
+        print(f"LAN:   http://{get_lan_ip()}:{port}")
 
     uvicorn.run("app.main:app", host=host, port=port, reload=reload)

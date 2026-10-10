@@ -1,71 +1,65 @@
 const availabilityForm = document.querySelector("[data-availability-form]");
-
 if (availabilityForm) {
-    const changesInput = availabilityForm.querySelector("[data-availability-changes]");
-    const saveButton = availabilityForm.querySelector("[data-availability-save]");
-    const statusText = availabilityForm.querySelector("[data-availability-status]");
-    const toggles = availabilityForm.querySelectorAll("[data-availability-toggle]");
+    const toggles = [...availabilityForm.querySelectorAll("[data-availability-toggle]")];
     const changes = new Map();
+    const saveButton = availabilityForm.querySelector("[data-availability-save]");
+    const status = availabilityForm.querySelector("[data-availability-status]");
 
-    function updateSaveState() {
-        const pendingCount = changes.size;
-
-        changesInput.value = JSON.stringify(Array.from(changes.values()));
-        saveButton.disabled = pendingCount === 0;
-        statusText.textContent = pendingCount === 0
-            ? "Hacé los cambios necesarios y guardalos al finalizar."
-            : `${pendingCount} ${pendingCount === 1 ? "cambio pendiente" : "cambios pendientes"} de guardar.`;
+    function updateState() {
+        availabilityForm.querySelector("[data-availability-changes]").value = JSON.stringify([...changes.values()]);
+        saveButton.disabled = changes.size === 0;
+        status.textContent = changes.size ? `${changes.size} cambios pendientes de guardar.` : "Hacé los cambios necesarios y guardalos al finalizar.";
     }
 
-    function updateToggle(toggle, isAvailable) {
-        toggle.dataset.available = String(isAvailable);
-        toggle.classList.toggle("is-available", isAvailable);
-        toggle.classList.toggle("is-unavailable", !isAvailable);
-        toggle.textContent = isAvailable ? "✓" : "×";
-        toggle.setAttribute(
-            "aria-label",
-            `${toggle.dataset.personName}: ${isAvailable ? "disponible" : "no disponible"} el ${toggle.dataset.dayLabel}`,
-        );
-    }
-
-    toggles.forEach((toggle) => {
-        toggle.addEventListener("click", () => {
-            const isAvailable = toggle.dataset.available === "true";
-            const nextAvailable = !isAvailable;
-            const originalAvailable = toggle.dataset.originalAvailable === "true";
-            const key = `${toggle.dataset.personId}:${toggle.dataset.day}`;
-
-            updateToggle(toggle, nextAvailable);
-
-            if (nextAvailable === originalAvailable) {
-                changes.delete(key);
-            } else {
-                changes.set(key, {
-                    person_id: Number(toggle.dataset.personId),
-                    day: toggle.dataset.day,
-                    available: nextAvailable,
-                });
-            }
-
-            updateSaveState();
+    function setToggle(toggle, available) {
+        toggle.dataset.available = String(available);
+        toggle.classList.toggle("is-available", available);
+        toggle.classList.toggle("is-unavailable", !available);
+        toggle.textContent = available ? "✓" : "×";
+        toggle.setAttribute("aria-pressed", String(available));
+        toggle.setAttribute("aria-label", `${toggle.dataset.personName}: ${available ? "disponible" : "no disponible"} como ${toggle.dataset.roleLabel} el ${toggle.dataset.dayLabel}`);
+        const key = `${toggle.dataset.personId}:${toggle.dataset.day}:${toggle.dataset.role}`;
+        if (available === (toggle.dataset.originalAvailable === "true")) changes.delete(key);
+        else changes.set(key, {
+            person_id: Number(toggle.dataset.personId),
+            day: toggle.dataset.day,
+            role: toggle.dataset.role,
+            available
         });
-    });
+    }
+    toggles.forEach(toggle => toggle.addEventListener("click", () => {
+        setToggle(toggle, toggle.dataset.available !== "true");
+        updateState();
+    }));
+    availabilityForm.querySelectorAll("[data-bulk-available]").forEach(button => button.addEventListener("click", () => {
+        const person = availabilityForm.querySelector("[data-bulk-person]").value;
+        const role = availabilityForm.querySelector("[data-bulk-role]").value;
+        const start = availabilityForm.querySelector("[data-bulk-start]").value;
+        const end = availabilityForm.querySelector("[data-bulk-end]").value;
+        const weekday = availabilityForm.querySelector("[data-bulk-weekday]").value;
+        if (!start || !end || start > end) {
+            status.textContent = "Elegí un rango de fechas válido.";
+            return;
+        }
+        toggles.forEach(toggle => {
+            const day = (new Date(`${toggle.dataset.day}T12:00:00`).getDay() + 6) % 7;
+            const matchesDay = weekday === "all" || (weekday === "weekdays" && day < 5) || (weekday === "weekends" && day >= 5) || Number(weekday) === day;
+            if ((role === "both" || role === toggle.dataset.role) && (person === "all" || person === toggle.dataset.personId) && toggle.dataset.day >= start && toggle.dataset.day <= end && matchesDay) setToggle(toggle, button.dataset.bulkAvailable === "true");
+        });
+        updateState();
+    }));
 
+    function warn(event) {
+        if (changes.size) {
+            event.preventDefault();
+            event.returnValue = "";
+        }
+    }
+    window.addEventListener("beforeunload", warn);
     availabilityForm.addEventListener("submit", () => {
-        window.removeEventListener("beforeunload", warnAboutUnsavedChanges);
+        window.removeEventListener("beforeunload", warn);
         saveButton.disabled = true;
         saveButton.textContent = "Guardando...";
     });
-
-    function warnAboutUnsavedChanges(event) {
-        if (changes.size === 0) {
-            return;
-        }
-
-        event.preventDefault();
-        event.returnValue = "";
-    }
-
-    window.addEventListener("beforeunload", warnAboutUnsavedChanges);
-    updateSaveState();
+    updateState();
 }

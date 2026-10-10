@@ -1,18 +1,23 @@
-version: "2.4"
-
 services:
   app:
     build: .
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-guardias}:${POSTGRES_PASSWORD:-guardias}@db:5432/${POSTGRES_DB:-guardias}
       SQLALCHEMY_ECHO: ${SQLALCHEMY_ECHO:-false}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
     ports:
-      - "${APP_PORT:-8001}:8001"
+      - "${APP_BIND_HOST:-127.0.0.1}:${APP_PORT:-8001}:8001"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
-
   db:
     image: postgres:16
     environment:
@@ -20,7 +25,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-guardias}
       POSTGRES_DB: ${POSTGRES_DB:-guardias}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,6 +34,5 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
-
 volumes:
   postgres_data:

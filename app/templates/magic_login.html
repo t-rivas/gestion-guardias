@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Ingresar | Gestión de guardias{% endblock %}
+{% block content %}
+    <section class="panel auth-panel">
+        <div class="panel-header">
+            <h1>Ingresar</h1>
+            <p>Ingresá tu correo para recibir un enlace de acceso.</p>
+        </div>
+        {% if error %}<p class="alert alert-danger" role="alert">{{ error }}</p>{% endif %}
+        {% if sent %}
+            <p class="alert" role="status">Si el correo tiene acceso, recibirás un enlace.</p>
+            <p>Revisá tu bandeja de entrada y la carpeta de spam. El enlace vence en 15 minutos.</p>
+            <p>Esperá un minuto antes de solicitar otro enlace.</p>
+        {% endif %}
+        <form class="stack-form" method="post" action="/login">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ destination }}">
+            <label class="field">
+                Correo electrónico
+                <input type="email" name="email" maxlength="254" required autocomplete="email" autofocus>
+            </label>
+            <button class="button button-primary" type="submit">{{ 'Solicitar otro enlace' if sent else 'Enviar enlace' }}</button>
+        </form>
+    </section>
+{% endblock %}

@@ -1,26 +1,27 @@
 import os
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
+from app.auth_config import cloud_environment, database_url
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://guardias:guardias@localhost:5433/guardias",
+DATABASE_URL = database_url()
+engine = create_engine(
+    DATABASE_URL,
+    echo=os.getenv("SQLALCHEMY_ECHO", "false").lower() == "true",
+    pool_pre_ping=True,
+    **(
+        {"poolclass": NullPool, "connect_args": {"prepare_threshold": None}}
+        if cloud_environment()
+        else {}
+    ),
 )
-SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO", "false").lower() == "true"
-
-engine = create_engine(DATABASE_URL, echo=SQLALCHEMY_ECHO)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    with SessionLocal() as db:
+        try:
+            yield db
+        except Exception:
+            db.rollback()
+            raise

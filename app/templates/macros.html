@@ -1,0 +1,4 @@
+{% macro fields() -%}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="revision" value="{{ revision|default(0) }}">
+{%- endmacro %}

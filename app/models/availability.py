@@ -1,27 +1,15 @@
 from datetime import date
-
-from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy import Date, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
-
 from app.db.base import Base
 
 
 class Availability(Base):
     __tablename__ = "availability"
-
+    __table_args__ = (
+        UniqueConstraint("person_id", "date", name="uq_availability_person_date"),
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-
-    person_id: Mapped[int] = mapped_column(
-        ForeignKey("people.id"),
-        nullable=False,
-    )
-
-    date: Mapped[date] = mapped_column(
-        Date,
-        nullable=False,
-    )
-
-    type: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
-    )
+    person_id: Mapped[int] = mapped_column(ForeignKey("people.id"), nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
