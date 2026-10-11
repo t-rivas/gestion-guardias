@@ -16,7 +16,7 @@ from uuid import UUID
 import jwt
 from sqlalchemy import delete, update
 
-from app.auth_config import allowed_emails, local_path, normalized_email
+from app.auth_config import allowed_emails, email_origins, local_path, normalized_email
 from app.models.auth_delivery import AuthDelivery
 from app.services.auth_storage import insert_for, take_rate_limit
 from app.services.neon_auth import ProviderUnavailable
@@ -106,22 +106,26 @@ def delivery_link(data, settings):
             or (expiry - now).total_seconds() > 16 * 60
         ):
             raise InvalidWebhook()
+        origins = email_origins(settings)
         for key in ("callbackURL", "newUserCallbackURL", "errorCallbackURL"):
+            if len(params.get(key, [])) > 1:
+                raise InvalidWebhook()
             for target in params.get(key, []):
                 parsed = urlsplit(target)
                 if (
                     parsed.scheme or parsed.netloc
-                ) and f"{parsed.scheme}://{parsed.netloc}" != settings.base_url:
+                ) and f"{parsed.scheme}://{parsed.netloc}" not in origins:
                     raise InvalidWebhook()
                 if local_path(parsed.path) != parsed.path:
                     raise InvalidWebhook()
         callback = params.get("callbackURL", ["/"])[0]
         parsed = urlsplit(callback)
+        origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else settings.base_url
         destination = local_path(
             parsed.path + ("?" + parsed.query if parsed.query else "")
         )
         return (
-            settings.base_url
+            origin
             + "/auth/callback?"
             + urlencode({"token": token, "next": destination})
         )

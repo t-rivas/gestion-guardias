@@ -40,6 +40,34 @@ def allowed_emails():
     }
 
 
+def email_origins(settings):
+    """Exact app origins served by the shared, signed delivery webhook."""
+    origins = {settings.base_url}
+    for value in os.getenv("AUTH_EMAIL_ORIGINS", "").split(","):
+        value = value.strip().rstrip("/")
+        if not value:
+            continue
+        try:
+            parsed = urlsplit(value)
+            valid = (
+                parsed.scheme == "https"
+                and parsed.hostname
+                and not parsed.username
+                and not parsed.password
+                and parsed.port in {None, 443}
+                and not parsed.path
+                and not parsed.query
+                and not parsed.fragment
+                and "*" not in value
+            )
+        except ValueError:
+            valid = False
+        if not valid:
+            raise RuntimeError("AUTH_EMAIL_ORIGINS requires exact HTTPS origins.")
+        origins.add(value)
+    return origins
+
+
 @dataclass(frozen=True)
 class AuthSettings:
     mode: str
