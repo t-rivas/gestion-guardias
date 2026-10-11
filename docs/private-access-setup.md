@@ -13,16 +13,18 @@ There is no deployed `/setup` or password fallback.
   The exact stable preview HTTPS origin is trusted; localhost is disabled.
   Email/password and phone login are disabled; the unused shared Google OAuth
   configuration was removed, with no user records deleted.
-- The owner manually created the approved user. Its email remains unverified;
-  the first successful link must prove inbox ownership.
+- The owner manually created the approved user. The live magic-link attempts
+  subsequently verified the email through Neon; no manual verification shortcut
+  was used.
 - The replacement Gmail app password passed a real SMTP login (235), without
   sending a diagnostic email. Gmail credentials are saved as sensitive variables
   only for `t-rivas/auth-login-flow` preview. TLS uses SSL on port 465.
-- A separate delivery-only preview is being prepared in the same Vercel project.
+- A separate delivery-only preview was deployed in the same Vercel project.
   It registers only POST `/webhooks/neon-auth`. Its source bundle excludes the
   normal app entrypoint, scheduling routes, templates and static files.
   Tests prove all other routes return 404, unsigned messages cannot send, signed
-  deliveries work and repeated events send once. Full suite: 97 passed, 1 skipped.
+  deliveries work and repeated events send once. Latest full suite: 99 passed,
+  1 skipped. Mobile Chromium and WebKit simulated-provider browser checks pass.
 - Webhook-only deployment `dpl_2SxVtudAFXD3j9VWsjz1Su7e1SW6` is READY at
   `https://gestion-guardias-pdey7vpuw-7h146os-projects.vercel.app`. Verified its
   route exclusions behind temporary access, revoked that access, then applied an
@@ -39,10 +41,13 @@ There is no deployed `/setup` or password fallback.
   diagnostics show a provider redirect with no Set-Cookie headers; two provider
   sessions were created. Server redemption now omits callbackURL to select Better
   Auth's documented JSON response with session cookies, and still validates the
-  resulting session before issuing app cookies. Live confirmation is pending.
+  resulting session before issuing app cookies. Correction commit `05755f4` is
+  active on the stable preview as READY deployment `dpl_EWC2JgSTpSBEbgVoHpN9Wtbwqs43`.
+  Source reference: [Better Auth server JSON redemption](https://github.com/better-auth/better-auth/blob/main/packages/better-auth/src/plugins/magic-link/index.ts).
+  Live confirmation of the corrected callback is pending.
   Production remains unchanged.
 
-## Current setup
+## Setup history
 
 - Owner: `thiago.rivas0021@gmail.com`; mother's address is still pending.
 - User prefers creating Neon through the [Vercel Marketplace](https://vercel.com/marketplace/neon/neon).

@@ -396,3 +396,9 @@ in its redirect response, causing the app's expired-link error. Use the supporte
 server JSON redemption (omit callbackURL) while retaining live-session checks and
 never following provider redirects. Regression checks cover JSON flow, secure
 cookies and hostile redirect rejection. Live confirmation remains pending.
+
+Callback correction `05755f4` is confirmed READY on the stable preview as
+`dpl_EWC2JgSTpSBEbgVoHpN9Wtbwqs43`. Full suite: 99 passed, 1 skipped.
+Chromium/WebKit mobile simulated-provider checks passed, including cross-device
+callback, secure cookies, protected writes, logout and reused-link recovery.
+The corrected live callback still needs the owner's fresh-link confirmation.
