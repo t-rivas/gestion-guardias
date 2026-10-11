@@ -5,17 +5,38 @@ The existing local password mode and scheduling data are preserved. Vercel and
 `APP_ENV=preview`/`production` require Neon; missing configuration stops startup.
 There is no deployed `/setup` or password fallback.
 
+## Current verified integration state (2026-10-11)
+
+- Neon CLI access was restored by the owner. Selected `main` branch:
+  `br-curly-dust-b7h0t1tj`, project `plain-lab-97919633`.
+- Magic Link is enabled, expiry is 15 minutes and public signup is disabled.
+  The exact stable preview HTTPS origin is trusted; localhost is disabled.
+  Email/password and phone login are disabled; the unused shared Google OAuth
+  configuration was removed, with no user records deleted.
+- The owner manually created the approved user. Its email remains unverified;
+  the first successful link must prove inbox ownership.
+- The replacement Gmail app password passed a real SMTP login (235), without
+  sending a diagnostic email. Gmail credentials are saved as sensitive variables
+  only for `t-rivas/auth-login-flow` preview. TLS uses SSL on port 465.
+- A separate delivery-only preview is being prepared in the same Vercel project.
+  It registers only POST `/webhooks/neon-auth`. Its source bundle excludes the
+  normal app entrypoint, scheduling routes, templates and static files.
+  Tests prove all other routes return 404, unsigned messages cannot send, signed
+  deliveries work and repeated events send once. Full suite: 97 passed, 1 skipped.
+- Hosted webhook reachability, real delivery and authenticated callback still
+  require live verification. Production remains unchanged.
+
 ## Current setup
 
 - Owner: `thiago.rivas0021@gmail.com`; mother's address is still pending.
 - User prefers creating Neon through the [Vercel Marketplace](https://vercel.com/marketplace/neon/neon).
 - Screenshots confirm `neon-gestion-guardias` (`plain-lab-97919633`) is Available on Free, in AWS US East 1 (N. Virginia), and connected to `gestion-guardias`. On 2026-10-10 the user explicitly selected `main` for implementation and declined creating a development branch.
 - User reports only Magic Link enabled on `main` and confirms Allow New User Registration is off. The user corrected the expiration to **5 minutes**, so the plan's 15-minute setting is still outstanding. Auth Base URL and project ID are saved in `.env.private-access`. A live read-only probe passed: branch JWKS returned keys and the anonymous session endpoint returned null. Approved-user provisioning, email delivery and authenticated callbacks remain pending.
-- User initially reported having neither SMTP credentials nor a sender domain. On 2026-10-11 they confirmed Gmail's App passwords form is available for the approved owner's mailbox. Gmail SMTP host/port/TLS and sender fields are prepared locally; the generated app password is pending secret entry.
+- User initially reported having neither SMTP credentials nor a sender domain. On 2026-10-11 they confirmed Gmail's App passwords form is available for the approved owner's mailbox. Gmail SMTP host/port/TLS and sender fields are prepared locally; the app password was subsequently replaced and successfully authenticated, as recorded above.
 - `.env.private-access` is gitignored and initially created with mode `0600`,
-  its own stable session secret; Auth Base URL/project ID and database credentials are now populated. Administrative and sender credentials remain pending.
+  its own stable session secret; Auth Base URL/project ID and database credentials are now populated. CLI administrative access and sender credentials were subsequently configured, as recorded above.
   Existing `.env` values were retained. Never paste credentials or login links in chat.
-- Deployment URL: `https://gestion-guardias-two.vercel.app`. On 2026-10-10 anonymous GETs to `/`, `/login`, `/setup`, `/health` and `/personas` all returned HTTP 500 with `FUNCTION_INVOCATION_FAILED`; deployed startup/configuration is unresolved. This URL is saved as `APP_BASE_URL` locally with `COOKIE_SECURE=true`.
+- Deployment URL: `https://gestion-guardias-two.vercel.app`. On 2026-10-10 anonymous GETs to `/`, `/login`, `/setup`, `/health` and `/personas` all returned HTTP 500 with `FUNCTION_INVOCATION_FAILED`; deployed startup/configuration is unresolved. The private setup file now uses the stable preview origin with `COOKIE_SECURE=true`.
 - Published the complete reviewed app/auth/scheduling change set to `t-rivas/auth-login-flow` at `c4acd90`, then the manifest fix at `23604f3`. GitHub main remains at `132b68f`. Fixed the missing `[project]` table, added matching runtime dependency pins and `uv.lock`; a fresh Python 3.12 environment installed by Vercel's uv 0.10.11 passes 87 tests, with one PostgreSQL integration test skipped. Vercel reports the corrected preview deployment READY at `https://gestion-guardias-pty8ytvpb-7h146os-projects.vercel.app`; anonymous `/` and `/login` redirect to Vercel SSO. This verifies the build and platform protection, not app startup or authenticated login.
 - User restricts cloud inspection to `gestion-guardias` in `7h146os-projects` and Git changes to its existing `t-rivas/gestion-guardias` repository. Vercel CLI is authenticated and scoped project inspection confirms FastAPI and project ID `prj_BSh43i1g68RoUwN9tS4mHlP5koMs`. Initial environment-name inspection showed Neon integration variables but no app origin/whitelist/session-secret/secure-cookie configuration. Automatic approval review rejected downloading the full production secret payload; no full environment download occurred.
 - On 2026-10-11 the user explicitly approved retrieving only `DATABASE_URL` and `DATABASE_URL_UNPOOLED` into `.env.private-access` and running a read-only database check. This supersedes the earlier lack of authorization for these two credentials only; full environment downloads remain outside scope.
@@ -26,7 +47,7 @@ There is no deployed `/setup` or password fallback.
   Rebuilt revision `23604f3` as preview `dpl_96bjS12FcNG5Vu8nhxQHsBRvbG6B`, READY at `https://gestion-guardias-43jp5wsp1-7h146os-projects.vercel.app`. Stable origin: `https://gestion-guardias-git-t-rivas-auth-login-flow-7h146os-projects.vercel.app`. Hosted checks using a temporary verification-only Vercel token passed: health/login 200, anonymous app pages 303, setup 404, anonymous write 401, unsigned webhook 400. The exact temporary token was revoked after these checks; platform authentication remains enabled. This does not establish webhook reachability from Neon or an authenticated login.
   The previously skipped PostgreSQL racing-save test was exercised directly against an isolated temporary schema on the selected main database and passed: the first writer commits and the racing stale writer receives 409. Removed only that task-created schema afterward; app tables were not modified. The earlier full-suite result remains 87 passed, 1 skipped, with this separate live PostgreSQL check now passing.
   Published the setup progress as `6ee0139`; GitHub's Vercel deployment check succeeded. Scoped Neon CLI branch lookup returned an authorization error, so administrative Auth configuration still requires restored CLI access or the user's console action. No other projects were queried.
-  The exact Neon `main` branch identifier remains to be recorded.
+  The exact Neon `main` branch identifier is now confirmed above.
   No live auth/email flow, data transfer, or completed production release is verified.
 
 ## Environment settings
@@ -61,8 +82,8 @@ account restrictions](https://support.google.com/accounts/answer/185833).
 Verify availability at https://myaccount.google.com/apppasswords before choosing
 this path; keep MFA enabled and use an app password rather than the normal mailbox
 password. Availability is confirmed and Gmail connection fields are prepared;
-the app password and live delivery remain pending. Use
-`smtp.gmail.com`, port `587`, `starttls`, and the mailbox address for username/from.
+the replacement app password now authenticates, while live delivery remains pending. Use
+`smtp.gmail.com`, port `465`, `ssl`, and the mailbox address for username/from.
 Configure credentials in the app's secret environment, because the signed webhook
 is the sole magic-link delivery path. Do not also enable a competing Neon SMTP path.
 
@@ -142,7 +163,7 @@ than the webhook, so do not use either as a purported path-only exception. Inspe
 the account's current supported controls; if no suitably scoped route exception
 exists, prepare a separate minimal webhook-only deployment using the same isolated
 branch. That deployment must expose no scheduling, export, login, or general proxy
-routes. Its URL/reachability still needs preparation and verification.
+routes. Run `python scripts/deploy_webhook.py` to create this source-only preview in the existing project, without deploying administrative keys. It does not change protection or Neon configuration. Verify the deployment before adding a domain/deployment exception; never reuse that exception on a full app deployment. Its URL/reachability still needs verification.
 [Vercel protection bypass methods](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection).
 
 ## Verification and release gates
@@ -166,9 +187,7 @@ failures, email-origin navigation, mobile/Safari, and another device. Confirm
 webhook coverage and unused auth providers on the actual branch. Disable auth/data
 API access paths outside this app unless explicitly required and restricted.
 
-The next cloud action is opening the existing Neon resource from Vercel and
-checking Auth, then obtaining only non-secret project/branch identifiers and the Auth Base URL. Deployment, sender
-setup and inbox proof remain pending. Verify current resource quotas/costs before
+The remaining live work is webhook reachability, delivery and authenticated callback verification. Inbox proof remains pending. Verify current resource quotas/costs before
 selecting upgrades; no paid resource has been requested.
 
 Before production, ask whether to copy the existing local scheduling data. Create

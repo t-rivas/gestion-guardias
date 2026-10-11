@@ -133,6 +133,10 @@ def send_email(recipient, link):
     # Only invoked after signature, allowlist, expiry, URL and shared-storage checks.
     host = os.getenv("SMTP_HOST")
     username, password = os.getenv("SMTP_USERNAME"), os.getenv("SMTP_PASSWORD")
+    # Google displays app passwords in groups separated by spaces. Other SMTP
+    # providers may use meaningful spaces, so normalize Gmail credentials only.
+    if host and host.lower() == "smtp.gmail.com" and password:
+        password = password.replace(" ", "")
     sender = os.getenv("SMTP_FROM")
     security = os.getenv("SMTP_SECURITY", "starttls")
     if not all((host, username, password, sender)) or security not in {

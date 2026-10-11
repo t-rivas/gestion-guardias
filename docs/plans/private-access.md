@@ -368,3 +368,17 @@ Verify current documentation before cloud/API changes. Dashboard labels and plan
 - [Neon managed-auth API and user administration](https://github.com/neondatabase/website/blob/main/content/docs/auth/guides/manage-auth-api.md)
 - [Neon on Vercel](https://vercel.com/marketplace/neon/neon)
 - [FastAPI on Vercel](https://vercel.com/docs/frameworks/backend/fastapi)
+
+### 2026-10-11: sender and isolated webhook integration
+
+Owner restored Neon CLI authentication and replaced the rejected Gmail app
+password. SMTP_SSL port 465 authenticated with status 235; no diagnostic mail
+was sent. Preview-only Gmail settings were uploaded to the approved branch.
+Neon main is `br-curly-dust-b7h0t1tj`; configured magic links for 15 minutes,
+public signup disabled, exact stable preview trusted and localhost disabled.
+Removed unused shared Google OAuth configuration, retaining all users.
+Prepared a delivery-only entrypoint and a minimal deployment bundle in the same
+Vercel project. It excludes scheduling/login routes, templates and static files;
+signed delivery and replay tests plus all-route exclusion checks pass. Full
+suite is 97 passed, 1 skipped. Hosted reachability and real inbox proof are
+pending; production has not been changed.

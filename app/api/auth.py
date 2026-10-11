@@ -2,8 +2,7 @@ import os
 import secrets
 from urllib.parse import urlencode, urlsplit
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
-from starlette.concurrency import run_in_threadpool
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -18,7 +17,7 @@ from app.services.neon_auth import (
     apply_cookies,
     response_cookies,
 )
-from app.services.auth_webhooks import InvalidWebhook, deliver_event
+from app.api.auth_webhook import router as webhook_router
 
 router = APIRouter()
 
@@ -270,31 +269,4 @@ async def callback(request: Request):
     return response
 
 
-@router.post("/webhooks/neon-auth")
-async def webhook(request: Request):
-    if request.app.state.auth_settings.mode != "neon":
-        raise HTTPException(404)
-    raw = bytearray()
-    async for chunk in request.stream():
-        raw.extend(chunk)
-        if len(raw) > 65536:
-            raise HTTPException(413)
-    raw = bytes(raw)
-    try:
-        data = await request.app.state.webhook_verifier.verify(raw, request.headers)
-        kwargs = {}
-        if hasattr(request.app.state, "email_sender"):
-            kwargs["sender"] = request.app.state.email_sender
-        status, body = await run_in_threadpool(
-            deliver_event,
-            data,
-            raw,
-            request.app.state.auth_settings,
-            request.app.state.session_factory,
-            **kwargs,
-        )
-        return JSONResponse(body, status_code=status)
-    except InvalidWebhook:
-        raise HTTPException(400, "Webhook no válido.") from None
-    except ProviderUnavailable:
-        raise HTTPException(503, "No se pudo verificar el webhook.") from None
+router.include_router(webhook_router)
