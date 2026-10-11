@@ -494,3 +494,52 @@ def test_callback_never_follows_provider_redirect(neon):
     client = signed_in(neon)
     assert client.get("/personas").status_code == 200
     assert all(call.url.host == "ep-test.neonauth.us-east-1.aws.neon.tech" for call in neon["calls"])
+
+
+@pytest.mark.parametrize('origin', ['https://production.example.com', 'https://preview.example.com'])
+def test_shared_signed_delivery_uses_requested_allowed_origin(neon, monkeypatch, origin):
+    from urllib.parse import urlencode, urlsplit, parse_qs
+
+    monkeypatch.setenv('AUTH_EMAIL_ORIGINS', 'https://production.example.com,https://preview.example.com')
+    data = event()
+    data['event_data']['link_url'] = PROVIDER + '/magic-link/verify?' + urlencode({
+        'token': 'valid-token',
+        'callbackURL': origin + '/disponibilidad?year=2026&month=10',
+        'errorCallbackURL': origin + '/login?error=expired',
+    })
+    raw, headers = signed_webhook(neon, data)
+    assert neon['client'].post('/webhooks/neon-auth', content=raw, headers=headers).status_code == 200
+    link = urlsplit(neon['sent'][0][1])
+    assert f'{link.scheme}://{link.netloc}' == origin
+    assert link.path == '/auth/callback'
+    assert parse_qs(link.query) == {'token': ['valid-token'], 'next': ['/disponibilidad?year=2026&month=10']}
+
+
+@pytest.mark.parametrize('target', ['https://attacker.invalid/', '//attacker.invalid/', 'https://production.example.com.attacker.invalid/'])
+def test_shared_delivery_rejects_unlisted_origin(neon, monkeypatch, target):
+    from urllib.parse import urlencode
+
+    monkeypatch.setenv('AUTH_EMAIL_ORIGINS', 'https://production.example.com,https://preview.example.com')
+    data = event()
+    data['event_data']['link_url'] = PROVIDER + '/magic-link/verify?' + urlencode({'token': 'valid-token', 'callbackURL': target})
+    raw, headers = signed_webhook(neon, data)
+    assert neon['client'].post('/webhooks/neon-auth', content=raw, headers=headers).status_code == 400
+    assert not neon['sent']
+
+
+def test_shared_delivery_rejects_duplicate_callbacks(neon, monkeypatch):
+    monkeypatch.setenv('AUTH_EMAIL_ORIGINS', 'https://production.example.com')
+    data = event()
+    data['event_data']['link_url'] += '&callbackURL=https%3A%2F%2Fproduction.example.com%2F'
+    raw, headers = signed_webhook(neon, data)
+    assert neon['client'].post('/webhooks/neon-auth', content=raw, headers=headers).status_code == 400
+    assert not neon['sent']
+
+
+@pytest.mark.parametrize('origin', ['http://production.example.com', 'https://*.example.com', 'https://production.example.com/path', 'https://user:password@production.example.com', 'https://production.example.com?next=x', 'https://production.example.com#fragment', 'https://production.example.com:444'])
+def test_email_origin_configuration_requires_exact_https_origins(monkeypatch, origin):
+    from app.auth_config import email_origins
+
+    monkeypatch.setenv('AUTH_EMAIL_ORIGINS', origin)
+    with pytest.raises(RuntimeError, match='exact HTTPS origins'):
+        email_origins(AuthSettings('neon', 'https://testserver', PROVIDER, True))

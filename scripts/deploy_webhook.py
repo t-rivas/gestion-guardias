@@ -33,6 +33,8 @@ def deploy():
         'SESSION_SECRET', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USERNAME',
         'SMTP_PASSWORD', 'SMTP_FROM', 'SMTP_SECURITY',
     )}
+    if os.environ.get('AUTH_EMAIL_ORIGINS'):
+        values['AUTH_EMAIL_ORIGINS'] = os.environ['AUTH_EMAIL_ORIGINS']
     values.update(AUTH_MODE='neon', APP_ENV='preview', COOKIE_SECURE='true', SQLALCHEMY_ECHO='false')
     with tempfile.TemporaryDirectory(prefix='guardias-webhook-') as folder:
         root = Path(folder)

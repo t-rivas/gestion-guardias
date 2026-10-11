@@ -224,3 +224,18 @@ backup to an isolated branch and verify it before changing production connection
 settings. Migration downgrade refuses to delete auth receipts. A legacy password
 deployment must remain behind platform protection. Obtain production authorization
 after the preview and live checks pass; changing account settings alone is not a release.
+
+## Production configuration in progress
+
+The owner authorized merging to main and configuring production. PR #1 merged
+as `19f5894`; the stable production origin is
+`https://gestion-guardias-two.vercel.app`. The same selected Neon main database
+is retained. Production receives the tested secure auth/SMTP settings, while
+preview keeps its own origin. No local scheduling data is copied or deleted.
+
+The shared delivery-only webhook uses `AUTH_EMAIL_ORIGINS` to admit exactly the
+production and stable preview origins. It builds the emailed callback on the
+verified event's approved origin, rejecting other origins and repeated callback
+parameters. This setting belongs to the minimal webhook deployment, not a public
+auth proxy or an application CSRF bypass. The default still accepts only its
+configured `APP_BASE_URL`. Neon must trust both exact HTTPS app origins.

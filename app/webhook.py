@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from app.api.auth_webhook import router
-from app.auth_config import AuthSettings
+from app.auth_config import AuthSettings, email_origins
 from app.db.database import SessionLocal
 from app.services.auth_webhooks import WebhookVerifier
 from app.services.neon_auth import NeonAuth
@@ -13,6 +13,7 @@ def create_webhook_app(settings=None, session_factory=None):
     settings = settings or AuthSettings.from_env()
     if settings.mode != "neon":
         raise RuntimeError("The delivery-only deployment requires Neon authentication.")
+    email_origins(settings)  # Reject malformed routing configuration before serving.
     app = FastAPI(
         docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False
     )
