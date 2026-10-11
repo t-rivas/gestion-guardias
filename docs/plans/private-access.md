@@ -410,3 +410,27 @@ The approved owner's live flow now delivers the email and establishes an
 authenticated app session from a fresh link on the stable preview. This resolves
 the reported missing-mail and expired-link login failures. Remaining release
 gates are separate; production and GitHub main have not been changed.
+
+
+### Production configuration and published main — 2026-10-11
+
+The owner authorized merging to main and then configuring production. PR #1
+merged as `19f5894`; PR #2 merged shared production/preview delivery routing as
+`9893197`. Production auth and sensitive SMTP variables are configured on the
+existing Vercel project. The integration database and Auth Base URL retain the
+owner-selected Neon main branch; no local scheduling data was transferred.
+
+Production is READY at `https://gestion-guardias-two.vercel.app`, deployment
+`dpl_HsjViStvazELQKdvsMMbfjdQS2Yj`. Hosted checks pass: health/login 200,
+anonymous pages 303, exports/writes 401, setup 404, wrong-origin submission 403,
+unsigned webhook 400; the fresh login cookie has Secure, HttpOnly and SameSite=Lax.
+Full suite: 112 passed, 1 skipped. These probes sent no email. The owner then
+requested a fresh production link and confirmed: “Recibí el correo y pude entrar”.
+Production inbox delivery and authenticated callback are now verified live.
+
+The shared minimal webhook is READY as `dpl_5g8rh98rqD7SJV7KjMENZuLDFa1G`.
+It accepts signed callbacks only for the exact production and stable preview
+origins. Other app routes return 404 and unsigned webhook POSTs return 400.
+Neon targets this deployment; temporary verification access and the previous
+minimal deployment's exception were revoked. Only the new minimal deployment
+has a public exception; the full preview remains platform protected.

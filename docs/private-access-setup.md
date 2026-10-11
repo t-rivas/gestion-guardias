@@ -1,11 +1,12 @@
-# Private access: preview setup and verification
+# Private access: setup and verification
 
-The implementation is an integration prototype until the live checks below pass.
+Preview inbox delivery and login are verified by the owner. Production is now
+configured and published; owner inbox delivery and login are also verified.
 The existing local password mode and scheduling data are preserved. Vercel and
 `APP_ENV=preview`/`production` require Neon; missing configuration stops startup.
 There is no deployed `/setup` or password fallback.
 
-## Current verified integration state (2026-10-11)
+## Verified preview integration (2026-10-11)
 
 - Neon CLI access was restored by the owner. Selected `main` branch:
   `br-curly-dust-b7h0t1tj`, project `plain-lab-97919633`.
@@ -47,7 +48,7 @@ There is no deployed `/setup` or password fallback.
   The owner confirmed successful login with a fresh emailed link after the
   correction: “Ahora si pude entrar”. Inbox delivery and authenticated callback
   are now verified live for the approved owner on the preview.
-  Production remains unchanged.
+  Production was subsequently configured as recorded below.
 
 ## Setup history
 
@@ -225,12 +226,12 @@ settings. Migration downgrade refuses to delete auth receipts. A legacy password
 deployment must remain behind platform protection. Obtain production authorization
 after the preview and live checks pass; changing account settings alone is not a release.
 
-## Production configuration in progress
+## Production configured and published (2026-10-11)
 
 The owner authorized merging to main and configuring production. PR #1 merged
 as `19f5894`; the stable production origin is
 `https://gestion-guardias-two.vercel.app`. The same selected Neon main database
-is retained. Production receives the tested secure auth/SMTP settings, while
+is retained. Production has the tested secure auth/SMTP settings, while
 preview keeps its own origin. No local scheduling data is copied or deleted.
 
 The shared delivery-only webhook uses `AUTH_EMAIL_ORIGINS` to admit exactly the
@@ -239,3 +240,24 @@ verified event's approved origin, rejecting other origins and repeated callback
 parameters. This setting belongs to the minimal webhook deployment, not a public
 auth proxy or an application CSRF bypass. The default still accepts only its
 configured `APP_BASE_URL`. Neon must trust both exact HTTPS app origins.
+
+
+PR #2 merged the shared-origin delivery change as `9893197`. Full test suite:
+112 passed, 1 skipped (the PostgreSQL race test was previously verified separately).
+Production deployment `dpl_HsjViStvazELQKdvsMMbfjdQS2Yj` is READY at the stable
+production origin. Hosted anonymous checks passed: health/login 200, private
+pages 303 to login, exports/writes 401, disabled setup 404, wrong-origin login
+POST 403, unsigned webhook POST 400. A fresh login response sets the session
+cookie with Secure, HttpOnly and SameSite=Lax. No email was sent by these probes.
+The owner confirmed a fresh production email arrived and successfully opened
+an authenticated app session: “Recibí el correo y pude entrar”. This verifies
+the real inbox/callback flow on the production origin as well as the preview.
+
+The shared delivery-only deployment is now `dpl_5g8rh98rqD7SJV7KjMENZuLDFa1G`,
+`https://gestion-guardias-o2w72yshr-7h146os-projects.vercel.app`. Its temporary
+verification token was revoked, its public exception applies only to this minimal
+deployment, and anonymous route/signature checks passed (other app routes 404,
+unsigned webhook 400). Neon now targets it for both events with timeout 10.
+The old delivery-only deployment's public exception was revoked. The full app
+preview remains platform protected. Neon trusts the exact production and preview
+origins, with localhost disabled. No project-wide bypass was introduced.
