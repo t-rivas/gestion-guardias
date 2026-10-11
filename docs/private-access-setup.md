@@ -23,8 +23,20 @@ There is no deployed `/setup` or password fallback.
   normal app entrypoint, scheduling routes, templates and static files.
   Tests prove all other routes return 404, unsigned messages cannot send, signed
   deliveries work and repeated events send once. Full suite: 97 passed, 1 skipped.
-- Hosted webhook reachability, real delivery and authenticated callback still
-  require live verification. Production remains unchanged.
+- Webhook-only deployment `dpl_2SxVtudAFXD3j9VWsjz1Su7e1SW6` is READY at
+  `https://gestion-guardias-pdey7vpuw-7h146os-projects.vercel.app`. Verified its
+  route exclusions behind temporary access, revoked that access, then applied an
+  exception only to this minimal deployment. Anonymous unsigned webhook is 400;
+  login, people and home are 404. Full app preview remains platform protected.
+- Neon webhook is enabled for `send.magic_link` and `user.before_create`, with
+  timeout 10 seconds. No project-wide automation bypass or competing mail path.
+- Protected app `dpl_HUHeGsvyjk61JSqsJzRBSjaUAYHS` (commit `5920944`) is READY.
+  Hosted startup, canonical login redirect, disabled setup and anonymous write
+  rejection pass; temporary verification access was revoked.
+- Real request produced a signed webhook HTTP 200 and a `sent` receipt; owner
+  confirmed inbox receipt. Neon now records the email as verified. App callback
+  redirects to the expired-link error instead of accepting the session; live
+  callback diagnosis remains in progress. Production remains unchanged.
 
 ## Current setup
 

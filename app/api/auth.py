@@ -1,4 +1,5 @@
 import os
+import logging
 import secrets
 from urllib.parse import urlencode, urlsplit
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -19,6 +20,7 @@ from app.services.neon_auth import (
 )
 from app.api.auth_webhook import router as webhook_router
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -250,11 +252,17 @@ async def callback(request: Request):
             },
         )
         if upstream.status_code not in {200, 302, 303}:
+            logger.warning("Neon callback rejected: verification HTTP %s", upstream.status_code)
             return RedirectResponse("/login?error=expired", status_code=303)
         # Never forward an upstream redirect. Validate the actual resulting session.
         cookies = response_cookies(upstream)
         user, session_response = await provider.get_session(cookies)
         if not user:
+            logger.warning(
+                "Neon callback rejected: session_cookie=%s set_cookie_count=%s session_http=%s",
+                bool(cookies), len(upstream.headers.get_list("set-cookie")),
+                session_response.status_code if session_response is not None else None,
+            )
             return RedirectResponse("/login?error=expired", status_code=303)
     except ProviderUnavailable:
         raise HTTPException(

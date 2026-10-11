@@ -1,5 +1,6 @@
 """Small server-only bridge. No general proxy and no local auth token minting."""
 
+import logging
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 import re
@@ -7,6 +8,8 @@ import re
 import httpx
 
 from app.auth_config import allowed_emails, normalized_email
+
+logger = logging.getLogger(__name__)
 
 SESSION_COOKIE = "__Secure-neon-auth.session_token"
 SESSION_SECONDS = 7 * 24 * 60 * 60
@@ -71,8 +74,17 @@ def verified_identity(payload, now=None):
             and created <= now < expires
             and (now - created).total_seconds() < SESSION_SECONDS
         )
+        if not valid:
+            logger.warning(
+                "Neon identity rejected: verified=%s banned=%s user_match=%s allowed=%s current=%s age_valid=%s",
+                user.get("emailVerified") is True, user.get("banned") is True,
+                bool(user.get("id")) and user.get("id") == session.get("userId"),
+                normalized_email(user.get("email")) in allowed_emails(),
+                created <= now < expires, (now - created).total_seconds() < SESSION_SECONDS,
+            )
         return user if valid else None
     except (KeyError, ValueError, TypeError, AttributeError):
+        logger.warning("Neon identity rejected: invalid session structure or timestamps")
         return None
 
 
