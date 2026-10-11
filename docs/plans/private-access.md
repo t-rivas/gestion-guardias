@@ -340,6 +340,18 @@ committed before SMTP and never resent after an uncertain acknowledgement or
 crash; users request a fresh link after cooldown. These behaviors are documented
 and require live provider/sender verification before release.
 
+### Login delivery diagnostic — 2026-10-11
+
+The user reported no login email after opening the stable preview. Scoped metadata confirms the supplied deployment `gestion-guardias-oyccuhb73-7h146os-projects.vercel.app` is READY and has the stable feature-branch alias. A fresh read-only query against the configured Neon main database confirms that the approved email has no row in `neon_auth."user"`; there are no delivery receipts. The app allowlist does not provision an Auth account. With new-user registration disabled, the account must be provisioned administratively before link login can work.
+
+Vercel preview variable-name inspection still shows only the nine app/auth/database settings and no SMTP settings. Local SMTP fields, including the app password, are now populated; do not request the same secret again. Gmail connects and negotiates TLS on both 587 and 465, but disconnects during authentication (`SMTPServerDisconnected`), so credential validity remains unverified. No diagnostic email was sent. An unsigned empty POST to the stable preview webhook returns a Vercel protection 401, preventing an ordinary provider delivery request from reaching the handler. Scoped Neon CLI branch lookup still fails authorization; `NEON_BRANCH_ID` and `NEON_API_KEY` remain absent locally. Restore scoped administrative access or use the user's console action to provision the approved unverified Auth user, then finish SMTP authentication and a reachable signed webhook delivery path. Do not open public signup, remove platform protection, or mark the account verified to bypass inbox proof. No production changes were made.
+
+### Approved user created and preview login origin fixed — 2026-10-11
+
+The user created the approved Auth account in the console. A fresh read-only query confirms it now exists with `emailVerified=false`; inbox verification remains pending. Preview request logs confirm POST `/login` returns 403 on the generated deployment domain and 200 on the configured stable branch origin. No request bodies, provider tokens, or credential-bearing query strings were inspected or logged.
+
+GET `/login` now redirects alternate hosts to the fixed configured app origin before rendering a CSRF-bearing form. Only a validated local `next` destination and a fixed expired-link error may cross that redirect; arbitrary query tokens are dropped. Existing wrong-origin form submissions still receive 403 and now provide a link to the canonical login page. Regression checks: 93 tests passed, one PostgreSQL-only test skipped; isolated HTTPS browser checks passed in Chromium and WebKit, including alternate-host redirection, form submission, cookie/callback behavior, protected writes and logout. Preview publication and hosted verification follow; SMTP and public signed-webhook reachability are still unresolved. Production remains unchanged.
+
 ## Official references
 
 Verify current documentation before cloud/API changes. Dashboard labels and plan limits can change.

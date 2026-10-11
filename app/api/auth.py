@@ -1,5 +1,6 @@
 import os
 import secrets
+from urllib.parse import urlencode, urlsplit
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
@@ -74,7 +75,20 @@ def setup(
 
 @router.get("/login")
 def login_page(request: Request):
-    if request.app.state.auth_settings.mode == "neon":
+    settings = request.app.state.auth_settings
+    if settings.mode == "neon":
+        # Render the form on the configured origin so its cookie, CSRF token and
+        # provider callback all belong to the same site, including preview links.
+        if request.url.netloc.lower() != urlsplit(settings.base_url).netloc.lower():
+            query = {}
+            if "next" in request.query_params:
+                query["next"] = local_path(request.query_params["next"])
+            if request.query_params.get("error"):
+                query["error"] = "expired"
+            target = settings.base_url + "/login"
+            if query:
+                target += "?" + urlencode(query)
+            return RedirectResponse(target, status_code=303)
         return magic_page(
             request,
             error=(
@@ -260,7 +274,7 @@ async def webhook(request: Request):
             raw,
             request.app.state.auth_settings,
             request.app.state.session_factory,
-            **kwargs
+            **kwargs,
         )
         return JSONResponse(body, status_code=status)
     except InvalidWebhook:

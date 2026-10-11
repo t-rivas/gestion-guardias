@@ -8,7 +8,11 @@
             <button class="button button-secondary"
                     type="button"
                     onclick="history.back()">Volver y corregir</button>
-            <a class="button button-primary" href="/">Ir al inicio</a>
+            {% if recovery_url %}
+                <a class="button button-primary" href="{{ recovery_url }}">Volver a ingresar</a>
+            {% else %}
+                <a class="button button-primary" href="/">Ir al inicio</a>
+            {% endif %}
         </div>
     </section>
 {% endblock %}

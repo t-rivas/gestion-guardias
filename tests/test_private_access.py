@@ -118,6 +118,62 @@ def test_generic_login_cooldown_and_csrf(neon):
     assert body["email"] == EMAIL and body["callbackURL"] == "https://testserver/"
 
 
+@pytest.mark.parametrize(
+    "next_path, expected",
+    [
+        ("/personas", "/personas"),
+        ("/disponibilidad?year=2026&month=10", "/disponibilidad?year=2026&month=10"),
+        ("//evil.invalid", "/"),
+        ("https://evil.invalid", "/"),
+    ],
+)
+def test_preview_login_redirects_to_configured_origin(neon, next_path, expected):
+    from urllib.parse import urlencode, urlsplit, parse_qs
+
+    response = neon["client"].get(
+        "https://deployment-preview.vercel.app/login?" + urlencode({"next": next_path}),
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = urlsplit(response.headers["location"])
+    assert location.scheme == "https" and location.netloc == "testserver"
+    assert location.path == "/login"
+    assert parse_qs(location.query) == {"next": [expected]}
+    assert not neon["calls"]
+    canonical = neon["client"].get(response.headers["location"], follow_redirects=False)
+    assert canonical.status_code == 200
+    assert 'name="csrf_token"' in canonical.text
+
+
+def test_preview_login_redirect_does_not_forward_tokens(neon):
+    response = neon["client"].get(
+        "https://deployment-preview.vercel.app/login?token=private&error=arbitrary",
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "https://testserver/login?error=expired"
+
+
+def test_old_preview_form_still_rejects_origin_with_recovery(neon):
+    client = neon["client"]
+    csrf = token(client.get("/login"))
+    response = client.post(
+        "/login",
+        data={"email": EMAIL, "csrf_token": csrf},
+        headers={"origin": "https://deployment-preview.vercel.app"},
+    )
+    assert response.status_code == 403
+    assert 'href="https://testserver/login"' in response.text
+    assert "Volver a ingresar" in response.text
+    assert not neon["calls"]
+    response = client.post(
+        "/login",
+        data={"email": EMAIL, "csrf_token": csrf},
+        headers={"origin": "https://testserver"},
+    )
+    assert response.status_code == 200
+    assert len(neon["calls"]) == 1
+
+
 def test_callback_session_cookie_scope_logout_and_reuse(neon):
     c = neon["client"]
     response = c.get(

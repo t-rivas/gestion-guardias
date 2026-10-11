@@ -37,11 +37,11 @@ def auth_tag(account):
     return hashlib.sha256(account.password_hash.encode()).hexdigest()
 
 
-def error_response(request, status, message):
+def error_response(request, status, message, *, recovery_url=None):
     return templates.TemplateResponse(
         request=request,
         name="error.html",
-        context={"message": message, "status": status},
+        context={"message": message, "status": status, "recovery_url": recovery_url},
         status_code=status,
     )
 
@@ -140,7 +140,14 @@ class AccessMiddleware(BaseHTTPMiddleware):
                 }
                 if actual not in allowed:
                     return error_response(
-                        request, 403, "La solicitud proviene de otro sitio."
+                        request,
+                        403,
+                        "La solicitud proviene de otro sitio. Volvé a ingresar desde la dirección de la aplicación.",
+                        recovery_url=(
+                            settings.base_url + "/login"
+                            if settings.mode == "neon"
+                            else "/login"
+                        ),
                     )
             try:
                 length = int(request.headers.get("content-length", "0") or 0)

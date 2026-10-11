@@ -124,7 +124,11 @@ def main():
                     page = browser_context.new_page()
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
-                    page.goto(base + "/personas")
+                    page.goto(
+                        base.replace("127.0.0.1", "localhost")
+                        + "/login?next=%2Fpersonas"
+                    )
+                    expect(page).to_have_url(base + "/login?next=%2Fpersonas")
                     expect(
                         page.get_by_role("heading", name="Ingresar", exact=True)
                     ).to_be_visible()
