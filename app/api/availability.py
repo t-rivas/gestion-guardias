@@ -1,132 +1,129 @@
-import calendar
 import json
 from datetime import date
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-
 from app.db.database import get_db
-from app.models.availability import Availability
-from app.models.person import Person
-from app.services.availability_rules import WEEKEND_AVAILABLE
-from app.services.availability_rules import build_availability_sets
+from app.models import Availability, Person, PlanningState, RoleAvailability
+from app.services.availability_rules import (
+    ROLES,
+    ROLE_LABELS,
+    build_availability_sets,
+    is_person_available,
+    load_role_availability,
+    set_role_availability,
+)
+from app.services.planning import (
+    MONTH_NAMES,
+    WEEKDAY_NAMES,
+    lock_state,
+    month_context,
+    month_days,
+)
+from app.web import templates
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
-MONTH_NAMES = (
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-)
 
-WEEKDAY_NAMES = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+def set_availability(db, person, day, available):
+    # Legacy callers update both roles; their old contract remains supported.
+    db.query(RoleAvailability).filter_by(person_id=person.id, date=day).delete(
+        synchronize_session=False
+    )
+    default = day.weekday() < 5 and day.weekday() not in person.blocked_days
+    existing = (
+        db.query(Availability).filter_by(person_id=person.id, date=day).one_or_none()
+    )
+    if available == default:
+        if existing:
+            db.delete(existing)
+    elif existing:
+        existing.type = "AVAILABLE" if available else "OTHER"
+    else:
+        db.add(
+            Availability(
+                person_id=person.id,
+                date=day,
+                type="AVAILABLE" if available else "OTHER",
+            )
+        )
 
 
 @router.get("/disponibilidad")
 def availability_page(
     request: Request,
-    year: int | None = Query(default=None, ge=1, le=9999),
-    month: int | None = Query(default=None, ge=1, le=12),
+    year: int | None = Query(None, ge=1, le=9999),
+    month: int | None = Query(None, ge=1, le=12),
     db: Session = Depends(get_db),
 ):
     today = date.today()
-    selected_year = year or today.year
-    selected_month = month or today.month
-
-    people = db.query(Person).filter(Person.active == True).order_by(Person.id).all()
-
-    _, total_days = calendar.monthrange(selected_year, selected_month)
-    days = [date(selected_year, selected_month, day) for day in range(1, total_days + 1)]
-
-    unavailable = db.query(Availability).filter(
-        Availability.date >= days[0],
-        Availability.date <= days[-1],
-    ).all()
-
-    unavailable_dates, weekend_available_dates = build_availability_sets(unavailable)
-
+    year, month = year or today.year, month or today.month
+    days = month_days(year, month)
+    people = (
+        db.query(Person)
+        .filter(Person.active.is_(True))
+        .order_by(Person.full_name)
+        .all()
+    )
+    role_availability = load_role_availability(db, days[0], days[-1])
+    blocked = {p.id: p.blocked_days for p in people}
+    values = {
+        (p.id, d, role): is_person_available(p.id, d, *role_availability[role], blocked)
+        for p in people
+        for d in days
+        for role in ROLES
+    }
     return templates.TemplateResponse(
         request=request,
         name="disponibilidad.html",
-        context={
-            "people": people,
-            "days": days,
-            "year": selected_year,
-            "month": selected_month,
-            "month_name": MONTH_NAMES[selected_month - 1],
-            "month_options": enumerate(MONTH_NAMES, start=1),
-            "weekday_names": WEEKDAY_NAMES,
-            "unavailable_dates": unavailable_dates,
-            "weekend_available_dates": weekend_available_dates,
-            "previous_year": selected_year - 1 if selected_month == 1 else selected_year,
-            "previous_month": 12 if selected_month == 1 else selected_month - 1,
-            "next_year": selected_year + 1 if selected_month == 12 else selected_year,
-            "next_month": 1 if selected_month == 12 else selected_month + 1,
-        },
+        context=dict(
+            people=people,
+            days=days,
+            availability_values=values,
+            roles=ROLES,
+            role_labels=ROLE_LABELS,
+            revision=db.get(PlanningState, 1).revision,
+            **month_context(year, month),
+        ),
     )
 
 
 @router.post("/disponibilidad/toggle")
 def toggle_availability(
     person_id: int = Form(...),
-    day: str = Form(...),
-    reason: str = Form("OTHER"),
+    day: date = Form(...),
+    role: str = Form("both"),
+    revision: int = Form(...),
     db: Session = Depends(get_db),
 ):
-    selected_day = date.fromisoformat(day)
-
-    existing = db.query(Availability).filter(
-        Availability.person_id == person_id,
-        Availability.date == selected_day,
-    ).all()
-
-    if selected_day.weekday() >= 5:
-        weekend_override = next(
-            (item for item in existing if item.type == WEEKEND_AVAILABLE),
-            None,
+    state = lock_state(db, revision)
+    person = db.get(Person, person_id)
+    if not person or not person.active:
+        raise HTTPException(404, "Persona activa no encontrada.")
+    if role not in (*ROLES, "both"):
+        raise HTTPException(400, "Rol inválido.")
+    if role == "both":
+        unavailable, available = build_availability_sets(
+            db.query(Availability).filter_by(person_id=person_id, date=day).all()
         )
-
-        for item in existing:
-            db.delete(item)
-
-        if weekend_override is None:
-            db.add(
-                Availability(
-                    person_id=person_id,
-                    date=selected_day,
-                    type=WEEKEND_AVAILABLE,
-                )
-            )
+        set_availability(
+            db,
+            person,
+            day,
+            not is_person_available(
+                person_id, day, unavailable, available, {person_id: person.blocked_days}
+            ),
+        )
     else:
-        if existing:
-            for item in existing:
-                db.delete(item)
-        else:
-            db.add(
-                Availability(
-                    person_id=person_id,
-                    date=selected_day,
-                    type=reason,
-                )
-            )
-
+        role_availability = load_role_availability(db, day, day)
+        value = not is_person_available(
+            person_id, day, *role_availability[role], {person_id: person.blocked_days}
+        )
+        set_role_availability(db, person_id, day, role, value)
+    state.revision += 1
     db.commit()
-
     return RedirectResponse(
-        url=f"/disponibilidad?year={selected_day.year}&month={selected_day.month}",
-        status_code=303,
+        f"/disponibilidad?year={day.year}&month={day.month}", status_code=303
     )
 
 
@@ -134,71 +131,53 @@ def toggle_availability(
 def save_availability(
     year: int = Form(..., ge=1, le=9999),
     month: int = Form(..., ge=1, le=12),
-    changes: str = Form("[]"),
+    changes: str = Form("[]", max_length=1_500_000),
+    revision: int = Form(...),
     db: Session = Depends(get_db),
 ):
     try:
-        submitted_changes = json.loads(changes)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail="Cambios inválidos") from exc
-
-    if not isinstance(submitted_changes, list):
-        raise HTTPException(status_code=400, detail="Cambios inválidos")
-
-    active_person_ids = {
-        person_id
-        for person_id, in db.query(Person.id).filter(Person.active.is_(True)).all()
-    }
-
-    for change in submitted_changes:
-        if not isinstance(change, dict):
-            raise HTTPException(status_code=400, detail="Cambio inválido")
-
-        person_id = change.get("person_id")
-        day_value = change.get("day")
-        is_available = change.get("available")
-
+        submitted = json.loads(changes)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(400, "Cambios inválidos.") from exc
+    if not isinstance(submitted, list) or len(submitted) > 20_000:
+        raise HTTPException(400, "Cambios inválidos o demasiados cambios.")
+    state = lock_state(db, revision)
+    people = {p.id: p for p in db.query(Person).filter(Person.active.is_(True)).all()}
+    parsed = {}
+    for change in submitted:
         if (
-            not isinstance(person_id, int)
-            or person_id not in active_person_ids
-            or not isinstance(day_value, str)
-            or not isinstance(is_available, bool)
+            not isinstance(change, dict)
+            or type(change.get("person_id")) is not int
+            or change["person_id"] not in people
+            or type(change.get("available")) is not bool
         ):
-            raise HTTPException(status_code=400, detail="Cambio inválido")
-
+            raise HTTPException(400, "Cambio inválido.")
         try:
-            selected_day = date.fromisoformat(day_value)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail="Fecha inválida") from exc
-
-        if selected_day.year != year or selected_day.month != month:
-            raise HTTPException(status_code=400, detail="Fecha fuera del mes seleccionado")
-
-        db.query(Availability).filter(
-            Availability.person_id == person_id,
-            Availability.date == selected_day,
-        ).delete(synchronize_session=False)
-
-        if selected_day.weekday() >= 5 and is_available:
-            db.add(
-                Availability(
-                    person_id=person_id,
-                    date=selected_day,
-                    type=WEEKEND_AVAILABLE,
-                )
-            )
-        elif selected_day.weekday() < 5 and not is_available:
-            db.add(
-                Availability(
-                    person_id=person_id,
-                    date=selected_day,
-                    type="OTHER",
-                )
-            )
-
+            day = date.fromisoformat(change["day"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(400, "Fecha inválida.") from exc
+        if (day.year, day.month) != (year, month):
+            raise HTTPException(400, "Fecha fuera del mes seleccionado.")
+        role = change.get("role", "both")
+        if role not in (*ROLES, "both"):
+            raise HTTPException(400, "Rol inválido.")
+        # Expand to individual role keys so repeated/mixed changes have a predictable last value.
+        for target in ROLES if role == "both" else (role,):
+            parsed[(change["person_id"], day, target)] = change["available"]
+    general_keys = {
+        (change["person_id"], date.fromisoformat(change["day"]))
+        for change in submitted
+        if change.get("role", "both") == "both"
+    }
+    for pid, day in general_keys:
+        if parsed[(pid, day, "primary")] == parsed[(pid, day, "substitute")]:
+            set_availability(db, people[pid], day, parsed.pop((pid, day, "primary")))
+            parsed.pop((pid, day, "substitute"))
+    for (pid, day, role), available in parsed.items():
+        set_role_availability(db, pid, day, role, available)
+    if submitted:
+        state.revision += 1
     db.commit()
-
     return RedirectResponse(
-        url=f"/disponibilidad?year={year}&month={month}",
-        status_code=303,
+        f"/disponibilidad?year={year}&month={month}&saved=true", status_code=303
     )

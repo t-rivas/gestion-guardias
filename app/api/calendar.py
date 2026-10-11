@@ -1,182 +1,72 @@
-import calendar
-from collections import Counter
-from collections import defaultdict
-from datetime import date
-
-from fastapi import APIRouter, Depends, Form, Query, Request
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+import csv
+import io
+from datetime import date, datetime, timezone
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
-
-from app.api.availability import MONTH_NAMES, WEEKDAY_NAMES
 from app.db.database import get_db
-from app.models.availability import Availability
-from app.models.guard_assignment import GuardAssignment
-from app.models.person import Person
-from app.services.availability_rules import build_availability_sets
-from app.services.availability_rules import is_person_available
-from app.services.schedule_generator import ASSIGNMENT_SLOTS
+from app.models import PlanningState, ScheduleVersion
+from app.services.planning import (
+    lock_state,
+    saved_month,
+    schedule_view,
+    serialize,
+    replace_month,
+)
 from app.services.schedule_generator import generate_monthly_schedule
+from app.web import templates
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+
+
+def calendar_redirect(year, month, **query):
+    extra = "".join(f"&{key}={value}" for key, value in query.items())
+    return RedirectResponse(
+        f"/calendario?year={year}&month={month}{extra}", status_code=303
+    )
+
+
+def require_version(db, version_id):
+    version = db.get(ScheduleVersion, version_id)
+    if not version:
+        raise HTTPException(404, "Versión no encontrada.")
+    return version
 
 
 @router.get("/calendario")
 def calendar_page(
     request: Request,
-    year: int | None = Query(default=None, ge=1, le=9999),
-    month: int | None = Query(default=None, ge=1, le=12),
-    generated: bool = Query(default=False),
+    year: int | None = Query(None, ge=1, le=9999),
+    month: int | None = Query(None, ge=1, le=12),
+    version: int | None = Query(None, ge=1),
     db: Session = Depends(get_db),
 ):
     today = date.today()
-    selected_year = year or today.year
-    selected_month = month or today.month
-
-    _, total_days = calendar.monthrange(selected_year, selected_month)
-    days = [
-        date(selected_year, selected_month, day)
-        for day in range(1, total_days + 1)
-    ]
-
-    assignments = (
-        db.query(GuardAssignment, Person)
-        .join(Person, Person.id == GuardAssignment.person_id)
-        .filter(
-            GuardAssignment.date >= days[0],
-            GuardAssignment.date <= days[-1],
-        )
-        .order_by(GuardAssignment.date, GuardAssignment.slot)
+    year, month = year or today.year, month or today.month
+    preview = require_version(db, version) if version else None
+    if preview:
+        year, month = preview.year, preview.month
+    state = db.get(PlanningState, 1)
+    history = (
+        db.query(ScheduleVersion)
+        .filter_by(year=year, month=month)
+        .order_by(ScheduleVersion.id.desc())
         .all()
     )
-    unavailable = (
-        db.query(Availability)
-        .filter(
-            Availability.date >= days[0],
-            Availability.date <= days[-1],
-        )
-        .all()
+    context = schedule_view(db, year, month, preview.assignments if preview else None)
+    context.update(
+        preview=preview,
+        revision=state.revision,
+        history=history,
+        stale=bool(
+            preview
+            and preview.kind == "draft"
+            and preview.base_revision != state.revision
+        ),
+        saved=request.query_params.get("saved") == "true",
     )
-    unavailable_dates, weekend_available_dates = build_availability_sets(unavailable)
-
-    assignments_by_date = defaultdict(list)
-    for assignment, person in assignments:
-        assignments_by_date[assignment.date].append(
-            {
-                "assignment": assignment,
-                "person": person,
-                "has_conflict": (
-                    not person.active
-                    or not is_person_available(
-                        person.id,
-                        assignment.date,
-                        unavailable_dates,
-                        weekend_available_dates,
-                    )
-                ),
-            }
-        )
-
-    required_slots_count = len(ASSIGNMENT_SLOTS)
-    schedule = [
-        {
-            "day": day,
-            "assignments": assignments_by_date[day],
-            "primary_assignments": [
-                item
-                for item in assignments_by_date[day]
-                if item["assignment"].role == "primary"
-            ],
-            "substitute_assignment": next(
-                (
-                    item
-                    for item in assignments_by_date[day]
-                    if item["assignment"].role == "substitute"
-                ),
-                None,
-            ),
-            "missing_slots": required_slots_count - len(assignments_by_date[day]),
-            "has_conflict": any(
-                item["has_conflict"]
-                for item in assignments_by_date[day]
-            ),
-        }
-        for day in days
-    ]
-    unassigned_days = [
-        item["day"]
-        for item in schedule
-        if item["missing_slots"] > 0
-    ]
-    conflict_days = [
-        item["day"]
-        for item in schedule
-        if item["has_conflict"]
-    ]
-
-    assignment_counts = Counter(
-        person.id
-        for assignment, person in assignments
-    )
-    primary_assignment_counts = Counter(
-        person.id
-        for assignment, person in assignments
-        if assignment.role == "primary"
-    )
-    substitute_assignment_counts = Counter(
-        person.id
-        for assignment, person in assignments
-        if assignment.role == "substitute"
-    )
-    assigned_people = {
-        person.id: person
-        for assignment, person in assignments
-    }
-    people = (
-        db.query(Person)
-        .filter(Person.active.is_(True))
-        .order_by(Person.full_name)
-        .all()
-    )
-    people_by_id = {
-        person.id: person
-        for person in people
-    }
-    people_by_id.update(assigned_people)
-    person_summaries = [
-        {
-            "person": person,
-            "count": assignment_counts[person.id],
-            "primary_count": primary_assignment_counts[person.id],
-            "substitute_count": substitute_assignment_counts[person.id],
-        }
-        for person in sorted(
-            people_by_id.values(),
-            key=lambda person: person.full_name.lower(),
-        )
-    ]
-
     return templates.TemplateResponse(
-        request=request,
-        name="calendario.html",
-        context={
-            "schedule": schedule,
-            "person_summaries": person_summaries,
-            "has_assignments": bool(assignments),
-            "unassigned_days": unassigned_days,
-            "conflict_days": conflict_days,
-            "generated": generated,
-            "year": selected_year,
-            "month": selected_month,
-            "month_name": MONTH_NAMES[selected_month - 1],
-            "month_options": enumerate(MONTH_NAMES, start=1),
-            "weekday_names": WEEKDAY_NAMES,
-            "previous_year": selected_year - 1 if selected_month == 1 else selected_year,
-            "previous_month": 12 if selected_month == 1 else selected_month - 1,
-            "next_year": selected_year + 1 if selected_month == 12 else selected_year,
-            "next_month": 1 if selected_month == 12 else selected_month + 1,
-        },
+        request=request, name="calendario.html", context=context
     )
 
 
@@ -184,15 +74,221 @@ def calendar_page(
 def generate_calendar(
     year: int = Form(..., ge=1, le=9999),
     month: int = Form(..., ge=1, le=12),
+    revision: int = Form(...),
     db: Session = Depends(get_db),
 ):
-    generate_monthly_schedule(
-        db=db,
+    state = lock_state(db, revision)
+    version = ScheduleVersion(
         year=year,
         month=month,
+        kind="draft",
+        label="Borrador generado",
+        assignments=generate_monthly_schedule(db, year, month),
+        base_revision=state.revision,
+    )
+    db.add(version)
+    db.commit()
+    return calendar_redirect(year, month, version=version.id)
+
+
+@router.post("/calendario/versiones/{version_id}/aplicar")
+def apply_version(
+    version_id: int, revision: int = Form(...), db: Session = Depends(get_db)
+):
+    state = lock_state(db, revision)
+    version = require_version(db, version_id)
+    if version.kind == "draft" and version.base_revision != state.revision:
+        raise HTTPException(409, "Los datos cambiaron. Generá un nuevo borrador.")
+    if version.kind == "draft":
+        for row in serialize(saved_month(db, version.year, version.month)):
+            if row["locked"] and row not in version.assignments:
+                raise HTTPException(
+                    409, "El borrador no conserva las asignaciones bloqueadas."
+                )
+    replace_month(
+        db,
+        version.year,
+        version.month,
+        version.assignments,
+        state,
+        "Antes de aplicar una versión",
+    )
+    return calendar_redirect(version.year, version.month, saved="true")
+
+
+@router.post("/calendario/editar")
+def edit_assignment(
+    day: date = Form(...),
+    slot: int = Form(..., ge=1, le=4),
+    person_id: str = Form(""),
+    locked: bool = Form(False),
+    revision: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    state = lock_state(db, revision)
+    rows = [
+        row
+        for row in serialize(saved_month(db, day.year, day.month))
+        if not (row["date"] == day.isoformat() and row["slot"] == slot)
+    ]
+    if person_id:
+        try:
+            pid = int(person_id)
+        except ValueError as exc:
+            raise HTTPException(400, "Persona inválida.") from exc
+        rows.append(
+            dict(
+                person_id=pid,
+                date=day.isoformat(),
+                slot=slot,
+                role="substitute" if slot == 4 else "primary",
+                locked=locked,
+            )
+        )
+    elif locked:
+        raise HTTPException(400, "Elegí una persona antes de bloquear una asignación.")
+    replace_month(
+        db,
+        day.year,
+        day.month,
+        rows,
+        state,
+        "Antes de editar una asignación",
+        allow_existing_conflicts=True,
+    )
+    return calendar_redirect(day.year, day.month, saved="true")
+
+
+@router.post("/calendario/intercambiar")
+def swap_assignments(
+    year: int = Form(..., ge=1, le=9999),
+    month: int = Form(..., ge=1, le=12),
+    first: str = Form(...),
+    second: str = Form(...),
+    revision: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    state = lock_state(db, revision)
+    rows = serialize(saved_month(db, year, month))
+    by_key = {f"{r['date']}:{r['slot']}": r for r in rows}
+    a, b = by_key.get(first), by_key.get(second)
+    if not a or not b or first == second:
+        raise HTTPException(400, "Elegí dos asignaciones diferentes.")
+    if a["locked"] or b["locked"]:
+        raise HTTPException(
+            409, "Desbloqueá las asignaciones antes de intercambiarlas."
+        )
+    a["person_id"], b["person_id"] = b["person_id"], a["person_id"]
+    replace_month(
+        db,
+        year,
+        month,
+        rows,
+        state,
+        "Antes de intercambiar asignaciones",
+        allow_existing_conflicts=True,
+    )
+    return calendar_redirect(year, month, saved="true")
+
+
+def safe_csv(value):
+    text = str(value)
+    return (
+        "'" + text
+        if text.lstrip().startswith(("=", "+", "-", "@"))
+        or text.startswith(("\t", "\r", "\n"))
+        else text
     )
 
-    return RedirectResponse(
-        url=f"/calendario?year={year}&month={month}&generated=true",
-        status_code=303,
+
+def ics_escape(value):
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace("\n", "\\n")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\r", "")
+    )
+
+
+def fold_ics(line):
+    lines, part = [], ""
+    for char in line:
+        if len((part + char).encode("utf-8")) > 75:
+            lines.append(part)
+            part = " "
+        part += char
+    lines.append(part)
+    return "\r\n".join(lines)
+
+
+@router.get("/calendario/exportar/{format}")
+def export_calendar(
+    format: str,
+    year: int = Query(..., ge=1, le=9999),
+    month: int = Query(..., ge=1, le=12),
+    db: Session = Depends(get_db),
+):
+    context = schedule_view(db, year, month)
+    if format == "csv":
+        buffer = io.StringIO(newline="")
+        writer = csv.writer(buffer)
+        writer.writerow(["Fecha", "Lugar", "Rol", "Persona", "Bloqueada", "Estado"])
+        for day in context["schedule"]:
+            for e in day["entries"]:
+                writer.writerow(
+                    [
+                        day["day"].isoformat(),
+                        e["slot"],
+                        "Suplente" if e["slot"] == 4 else "Guardia",
+                        (
+                            safe_csv(e["person"].full_name)
+                            if e["person"]
+                            else "Sin asignar"
+                        ),
+                        "Sí" if e["row"] and e["row"]["locked"] else "No",
+                        (
+                            "Revisar"
+                            if e["conflict"]
+                            else "Completa" if e["row"] else "Pendiente"
+                        ),
+                    ]
+                )
+        data = "\ufeff" + buffer.getvalue()
+        media = "text/csv"
+    elif format == "ics":
+        lines = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//Gestion Guardias//ES",
+            "CALSCALE:GREGORIAN",
+        ]
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        for day in context["schedule"]:
+            for e in day["entries"]:
+                if not e["person"]:
+                    continue
+                role = "Suplente" if e["slot"] == 4 else "Guardia"
+                lines += [
+                    "BEGIN:VEVENT",
+                    f"UID:guardias-{day['day'].isoformat()}-{e['slot']}@gestion-guardias",
+                    f"DTSTAMP:{stamp}",
+                    f"DTSTART;VALUE=DATE:{day['day'].strftime('%Y%m%d')}",
+                    "DURATION:P1D",
+                    f"SUMMARY:{ics_escape(role+': '+e['person'].full_name)}",
+                    f"DESCRIPTION:{ics_escape('Requiere revisión' if e['conflict'] else 'Asignación guardada')}",
+                    "END:VEVENT",
+                ]
+        lines.append("END:VCALENDAR")
+        data = "\r\n".join(fold_ics(line) for line in lines) + "\r\n"
+        media = "text/calendar"
+    else:
+        raise HTTPException(404, "Formato no disponible.")
+    return Response(
+        data,
+        media_type=media,
+        headers={
+            "Content-Disposition": f'attachment; filename="guardias-{year:04d}-{month:02d}.{format}"'
+        },
     )

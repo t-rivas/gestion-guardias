@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+.venv
+__pycache__
+**/__pycache__
+.pytest_cache
+.local-backups
+.agents
+.codex
+tests
+docs
+scripts
+notes

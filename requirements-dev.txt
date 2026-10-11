@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==8.4.2
+httpx==0.28.1
+playwright==1.55.0
+black==25.1.0
+djlint==1.36.4

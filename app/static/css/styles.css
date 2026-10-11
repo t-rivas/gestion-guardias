@@ -1502,3 +1502,259 @@ html[data-theme="dark"] .alert-danger {
         max-width: 150px;
     }
 }
+
+/* Planning tools */
+.auth-shell {
+    display: block;
+}
+
+.auth-panel {
+    max-width: 480px;
+    margin: 6vh auto;
+}
+
+.stack-form {
+    display: grid;
+    gap: 14px;
+    padding: 20px 22px;
+}
+
+.stack-form>.button {
+    width: max-content;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.weekday-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.weekday-fields legend {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.weekday-fields label,
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+input[type="checkbox"] {
+    width: 18px;
+    min-height: 18px;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+
+.action-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.editor {
+    margin-top: 10px;
+}
+
+.editor summary {
+    cursor: pointer;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.editor[open] {
+    min-width: 220px;
+}
+
+.editor .stack-form {
+    padding: 12px 0 0;
+}
+
+.compact-form select {
+    max-width: 240px;
+    width: 100%;
+}
+
+.assignment-cell {
+    vertical-align: top;
+    min-width: 135px;
+}
+
+.assignment-cell .badge {
+    display: block;
+    margin-top: 6px;
+}
+
+.preview-panel {
+    padding: 20px 22px;
+    border: 2px solid var(--primary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.summary-stat {
+    display: grid;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    gap: 3px;
+}
+
+.summary-stat strong {
+    font-size: 28px;
+    color: var(--primary);
+}
+
+.summary-stat span {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.bulk-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+}
+
+.bulk-toolbar .field {
+    flex: 1 1 140px;
+}
+
+.logout-form {
+    margin-top: auto;
+    padding-top: 24px;
+}
+
+.export-actions {
+    margin: 18px 0;
+}
+
+.print-only {
+    display: none;
+}
+
+:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        gap: 7px;
+    }
+
+    .summary-stat {
+        padding: 12px;
+    }
+
+    .summary-stat strong {
+        font-size: 24px;
+    }
+
+    .bulk-toolbar {
+        padding: 16px;
+    }
+
+    .bulk-toolbar>button {
+        flex: 1 1 auto;
+    }
+
+    .logout-form {
+        padding: 0 0 12px;
+    }
+}
+
+@media print {
+
+    .sidebar,
+    .theme-toggle,
+    .no-print,
+    .page-header {
+        display: none !important;
+    }
+
+    .app-shell,
+    .calendar-grid {
+        display: block;
+    }
+
+    .main-content {
+        padding: 0;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    .panel {
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .table-wrapper {
+        overflow: visible;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 7px;
+        color: #111;
+        background: white !important;
+    }
+
+    .assignment-cell {
+        min-width: 0;
+    }
+
+    .data-table {
+        font-size: 11px;
+    }
+
+    tr {
+        break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    .summary-panel {
+        break-before: page;
+    }
+}
+
+.availability-role-label { display: block; color: var(--text-muted); font-size: 11px; font-weight: 500; }
+.role-availability-help { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--text-muted); }
+.availability-table tbody tr:nth-child(2n) th, .availability-table tbody tr:nth-child(2n) td { border-bottom: 2px solid var(--border-strong); }

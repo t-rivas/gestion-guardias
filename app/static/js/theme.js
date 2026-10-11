@@ -17,7 +17,9 @@ if (themeToggle) {
         const nextTheme = currentTheme === "dark" ? "light" : "dark";
 
         document.documentElement.dataset.theme = nextTheme;
-        localStorage.setItem("guardias-theme", nextTheme);
+        try {
+            localStorage.setItem("guardias-theme", nextTheme);
+        } catch (_) {}
         updateThemeToggle(nextTheme);
     });
 }

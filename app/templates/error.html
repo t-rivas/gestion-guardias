@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Revisar solicitud | Gestión de guardias{% endblock %}
+{% block content %}
+    <section class="panel empty-state">
+        <h1>No se pudo completar la solicitud</h1>
+        <p role="alert">{{ message }}</p>
+        <div class="action-group">
+            <button class="button button-secondary"
+                    type="button"
+                    onclick="history.back()">Volver y corregir</button>
+            {% if recovery_url %}
+                <a class="button button-primary" href="{{ recovery_url }}">Volver a ingresar</a>
+            {% else %}
+                <a class="button button-primary" href="/">Ir al inicio</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

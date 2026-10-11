@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros.html" import fields with context %}
+{% block title %}{{ 'Configurar acceso' if setup else 'Ingresar' }} | Gestión de guardias{% endblock %}
+{% block content %}
+    <section class="panel auth-panel">
+        <div class="panel-header">
+            <h1>{{ 'Configurá tu cuenta' if setup else 'Ingresar' }}</h1>
+            <p>
+                {{ 'Creá una cuenta para proteger el equipo y sus calendarios. La contraseña debe tener al menos 12 caracteres.' if setup else 'Ingresá con tu cuenta para administrar las guardias.' }}
+            </p>
+        </div>
+        <form class="stack-form"
+              method="post"
+              action="{{ '/setup' if setup else '/login' }}">
+            {{ fields() }}
+            {% if error %}<p class="alert alert-danger" role="alert">{{ error }}</p>{% endif %}
+            <label class="field">
+                Usuario
+                <input name="username"
+                       value="{{ username }}"
+                       maxlength="100"
+                       required
+                       autocomplete="username"
+                       autofocus>
+            </label>
+            <label class="field">
+                Contraseña
+                <input type="password"
+                       name="password"
+                       minlength="{{ 12 if setup else 1 }}"
+                       maxlength="200"
+                       required
+                       autocomplete="{{ 'new-password' if setup else 'current-password' }}">
+            </label>
+            {% if setup %}
+                <label class="field">
+                    Confirmar contraseña
+                    <input type="password"
+                           name="confirm_password"
+                           minlength="12"
+                           maxlength="200"
+                           required
+                           autocomplete="new-password">
+                </label>
+            {% endif %}
+            <button class="button button-primary" type="submit">{{ 'Crear cuenta' if setup else 'Ingresar' }}</button>
+        </form>
+    </section>
+{% endblock %}
