@@ -174,6 +174,25 @@ def test_old_preview_form_still_rejects_origin_with_recovery(neon):
     assert len(neon["calls"]) == 1
 
 
+def test_unconfigured_email_delivery_is_not_reported_as_success(neon, monkeypatch):
+    from app.main import app
+
+    monkeypatch.delattr(app.state, "email_sender")
+    for name in ("SMTP_HOST", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM"):
+        monkeypatch.delenv(name, raising=False)
+    client = neon["client"]
+    csrf = token(client.get("/login"))
+    responses = [
+        client.post("/login", data={"email": email, "csrf_token": csrf})
+        for email in (EMAIL, "stranger@example.com")
+    ]
+    assert all(response.status_code == 503 for response in responses)
+    assert responses[0].text == responses[1].text
+    assert "El envío de enlaces no está disponible" in responses[0].text
+    assert "Si el correo tiene acceso, recibirás un enlace." not in responses[0].text
+    assert not neon["calls"]
+
+
 def test_callback_session_cookie_scope_logout_and_reuse(neon):
     c = neon["client"]
     response = c.get(

@@ -176,6 +176,23 @@ def magic_page(request, *, sent=False, error=None, destination=None):
 
 async def request_link(request, email, destination):
     settings = request.app.state.auth_settings
+    # A global delivery outage must not appear as a successful email request.
+    # Apply this check equally to every address to preserve the allowlist policy.
+    sender_configured = callable(getattr(request.app.state, "email_sender", None)) or (
+        all(
+            os.getenv(name, "").strip()
+            for name in ("SMTP_HOST", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM")
+        )
+        and os.getenv("SMTP_SECURITY", "starttls") in {"starttls", "ssl"}
+    )
+    if not sender_configured:
+        response = magic_page(
+            request,
+            error="El envío de enlaces no está disponible por el momento. Volvé a intentarlo más tarde.",
+            destination=destination,
+        )
+        response.status_code = 503
+        return response
     email = normalized_email(email)
     destination = local_path(destination)
     secret = os.environ["SESSION_SECRET"]
