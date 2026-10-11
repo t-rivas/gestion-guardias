@@ -36,15 +36,17 @@ There is no deployed `/setup` or password fallback.
   Hosted startup, canonical login redirect, disabled setup and anonymous write
   rejection pass; temporary verification access was revoked.
 - Real request produced a signed webhook HTTP 200 and a `sent` receipt; owner
-  confirmed inbox receipt. Neon now records the email as verified. App callback
-  redirects to the expired-link error instead of accepting the session. Live
+  confirmed inbox receipt. Neon now records the email as verified. Before the
+  correction, the app callback redirected to the expired-link error. Live
   diagnostics show a provider redirect with no Set-Cookie headers; two provider
   sessions were created. Server redemption now omits callbackURL to select Better
   Auth's documented JSON response with session cookies, and still validates the
   resulting session before issuing app cookies. Correction commit `05755f4` is
   active on the stable preview as READY deployment `dpl_EWC2JgSTpSBEbgVoHpN9Wtbwqs43`.
   Source reference: [Better Auth server JSON redemption](https://github.com/better-auth/better-auth/blob/main/packages/better-auth/src/plugins/magic-link/index.ts).
-  Live confirmation of the corrected callback is pending.
+  The owner confirmed successful login with a fresh emailed link after the
+  correction: “Ahora si pude entrar”. Inbox delivery and authenticated callback
+  are now verified live for the approved owner on the preview.
   Production remains unchanged.
 
 ## Setup history
@@ -208,7 +210,7 @@ failures, email-origin navigation, mobile/Safari, and another device. Confirm
 webhook coverage and unused auth providers on the actual branch. Disable auth/data
 API access paths outside this app unless explicitly required and restricted.
 
-The remaining live work is webhook reachability, delivery and authenticated callback verification. Inbox proof remains pending. Verify current resource quotas/costs before
+Webhook reachability, owner inbox delivery and the corrected authenticated callback are verified live. Complete the remaining release checks listed above before a production release. Verify current resource quotas/costs before
 selecting upgrades; no paid resource has been requested.
 
 Before production, ask whether to copy the existing local scheduling data. Create

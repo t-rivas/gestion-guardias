@@ -402,3 +402,11 @@ Callback correction `05755f4` is confirmed READY on the stable preview as
 Chromium/WebKit mobile simulated-provider checks passed, including cross-device
 callback, secure cookies, protected writes, logout and reused-link recovery.
 The corrected live callback still needs the owner's fresh-link confirmation.
+
+### Live owner confirmation
+
+After correction `05755f4`, the owner confirmed: “Ahora si pude entrar”.
+The approved owner's live flow now delivers the email and establishes an
+authenticated app session from a fresh link on the stable preview. This resolves
+the reported missing-mail and expired-link login failures. Remaining release
+gates are separate; production and GitHub main have not been changed.
