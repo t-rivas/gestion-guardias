@@ -175,7 +175,7 @@ Update this table after meaningful progress. Record evidence without credentials
 | 3. Login prototype | Isolated tests passed; live proof pending | Fixed upstream operations, callback redemption, provider-backed verified identity, host-only Secure/HttpOnly/Lax cookies, app seven-day session cap, logout and recovery implemented. Chromium/WebKit HTTPS mobile tests passed with a simulated provider, including another browser context. Actual provider cookie/session contract, expiry/reuse and inbox navigation need live proof. |
 | 4. App integration | Neon mode wired for prototype | Spanish email form and generic confirmation; per-request whitelist/session check; unauthorized writes/exports blocked before scheduling access; CSRF/origins/local return paths/no-store retained. Scheduling workflow tests run in local-password and simulated-Neon modes. Production config refuses password fallback. No cloud login cutover yet. |
 | 5. Vercel/data | Hosted preview startup verified; main database migrated | Published the reviewed app and manifest fix on `t-rivas/auth-login-flow`; nine preview-only settings uploaded after explicit destination approval. Rebuilt protected preview is READY. Hosted health/login, anonymous redirects/write denial, setup exclusion and unsigned webhook rejection passed using a temporary verification token, then revoked. Explicit main migrations and read-only verification confirm Alembic `0004`, expected tables/constraints and initial planning state. Public schema was initially empty; no scheduling data transferred. Auth-user provisioning, real login and Neon webhook reachability remain pending. GitHub main and production settings are unchanged. |
-| 6. Tests/release | Local verification passed; release pending | Latest Python 3.12 suite: 87 passed, 1 skipped (PostgreSQL row-lock integration). Python 3.14 suite previously passed 74 tests before concurrent tests were added. Existing Chromium scheduling smoke passed; Chromium and WebKit mobile HTTPS auth checks passed with simulated provider. Live sender/provider, PostgreSQL concurrency, real Safari/device, costs, data-transfer decision, protected preview and production authorization remain pending. |
+| 6. Tests/release | Local and hosted denial checks passed; release pending | Latest Python 3.12 suite: 87 passed, 1 skipped. Previously skipped PostgreSQL racing-save test subsequently passed separately in a temporary schema on main, removed afterward without modifying app tables. Existing Chromium scheduling smoke and Chromium/WebKit mobile HTTPS auth checks passed with simulated provider. Hosted preview startup and anonymous denials passed. Live sender/provider, real Safari/device, costs, data-transfer decision and production release remain pending. |
 | 7. Mother's email | Waiting for address | Initial release can proceed with the owner's email |
 
 Implementation details and prepared setup/rollback commands are in
@@ -325,6 +325,13 @@ still pending. Production settings and GitHub main are unchanged.
 The user confirmed Gmail App passwords availability. Prepared Gmail connection
 and sender fields locally and requested secret entry of the app password into
 the private environment file. No email has been sent.
+Published setup progress as `6ee0139`; GitHub's Vercel deployment check succeeded.
+The previously skipped PostgreSQL racing-save test passed separately against an
+isolated temporary schema on the selected main database: the first writer
+committed and the stale racing writer received 409. Removed only the task-created
+schema afterward; app tables were not modified. Scoped Neon CLI branch lookup
+returned an authorization error; no other projects were queried. Administrative
+Auth configuration still needs restored CLI access or user console actions.
 
 Browser verification caught and corrected a real form-origin regression:
 `Referrer-Policy: no-referrer` caused browsers to post `Origin: null`. Normal pages
