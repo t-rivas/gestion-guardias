@@ -479,3 +479,18 @@ def test_cloud_database_tls_and_no_fallback(monkeypatch):
         "postgresql://user:password@ep-test.neon.tech/neondb?sslmode=require",
     )
     assert database_url().drivername == "postgresql+psycopg"
+
+
+def test_magic_link_redemption_uses_server_json_flow(neon):
+    client = signed_in(neon)
+    verify = next(call for call in neon["calls"] if call.url.path.endswith("/magic-link/verify"))
+    assert dict(verify.url.params) == {"token": "valid-token"}
+    assert SESSION_COOKIE in client.cookies
+    assert client.get("/personas").status_code == 200
+
+
+def test_callback_never_follows_provider_redirect(neon):
+    neon["verify_redirect"] = True
+    client = signed_in(neon)
+    assert client.get("/personas").status_code == 200
+    assert all(call.url.host == "ep-test.neonauth.us-east-1.aws.neon.tech" for call in neon["calls"])

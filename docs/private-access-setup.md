@@ -35,8 +35,12 @@ There is no deployed `/setup` or password fallback.
   rejection pass; temporary verification access was revoked.
 - Real request produced a signed webhook HTTP 200 and a `sent` receipt; owner
   confirmed inbox receipt. Neon now records the email as verified. App callback
-  redirects to the expired-link error instead of accepting the session; live
-  callback diagnosis remains in progress. Production remains unchanged.
+  redirects to the expired-link error instead of accepting the session. Live
+  diagnostics show a provider redirect with no Set-Cookie headers; two provider
+  sessions were created. Server redemption now omits callbackURL to select Better
+  Auth's documented JSON response with session cookies, and still validates the
+  resulting session before issuing app cookies. Live confirmation is pending.
+  Production remains unchanged.
 
 ## Current setup
 

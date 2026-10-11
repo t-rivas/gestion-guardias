@@ -382,3 +382,17 @@ Vercel project. It excludes scheduling/login routes, templates and static files;
 signed delivery and replay tests plus all-route exclusion checks pass. Full
 suite is 97 passed, 1 skipped. Hosted reachability and real inbox proof are
 pending; production has not been changed.
+
+### 2026-10-11: live delivery and callback correction
+
+Isolated webhook preview `dpl_2SxVtudAFXD3j9VWsjz1Su7e1SW6` passed hosted
+route/signature exclusions. Temporary verification access was revoked. Applied
+an exception only to this delivery-only deployment; anonymous unsigned webhook
+returns 400, other routes 404, full app remains protected. Enabled Neon webhook
+for send.magic_link/user.before_create with timeout 10. Owner confirmed mail
+receipt, and provider records email ownership as verified. Two delivery receipts
+are sent. Provider created sessions but callback returned no Set-Cookie headers
+in its redirect response, causing the app's expired-link error. Use the supported
+server JSON redemption (omit callbackURL) while retaining live-session checks and
+never following provider redirects. Regression checks cover JSON flow, secure
+cookies and hostile redirect rejection. Live confirmation remains pending.

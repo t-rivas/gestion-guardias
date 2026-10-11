@@ -245,11 +245,10 @@ async def callback(request: Request):
     try:
         upstream = await provider.call(
             "magic-link/verify",
-            params={
-                "token": token,
-                "callbackURL": settings.base_url + destination,
-                "errorCallbackURL": settings.base_url + "/login?error=expired",
-            },
+            # This is a server-side redemption. Omitting callbackURL selects
+            # Better Auth's JSON response with session cookies; its browser
+            # redirect flow can return no cookies through the hosted bridge.
+            params={"token": token},
         )
         if upstream.status_code not in {200, 302, 303}:
             logger.warning("Neon callback rejected: verification HTTP %s", upstream.status_code)

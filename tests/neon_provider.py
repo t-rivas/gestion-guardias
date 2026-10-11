@@ -58,7 +58,8 @@ def configure_neon(client, monkeypatch, base_url="https://testserver"):
                 )
             state["used"] = True
             return httpx.Response(
-                302,
+                302 if state.get("verify_redirect") else 200,
+                json={"status": True},
                 headers=[
                     ("location", "https://attacker.invalid"),
                     (
