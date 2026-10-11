@@ -170,11 +170,11 @@ Update this table after meaningful progress. Record evidence without credentials
 
 | Phase | Status | Evidence / next action |
 | --- | --- | --- |
-| 1. Inspect and prepare | Prototype prepared; first live Auth probe passed | Inspected and preserved substantial concurrent/uncommitted work. Baseline: 16 passed, 1 skipped. Verified official provider contracts. Gitignored mode-0600 `.env.private-access` retains its secret; main Auth Base URL/project ID saved. Live JWKS returned keys and anonymous session returned null. User reports only Magic Link enabled, registration off, expiry 5 minutes; change to planned 15 minutes. Main branch ID/database credentials remain pending. |
-| 2. Email delivery | Handler implemented; sender pending | Real Ed25519 signature fixtures verify raw body + bound timestamp, approved recipients, URL/expiry checks, shared delivery receipts, cooldown and duplicate prevention. User answered "Neither" for SMTP/domain. No email has been sent; next evaluate supported Gmail app-password option after account setup. |
+| 1. Inspect and prepare | Prototype prepared; live Auth/database probes passed | Inspected and preserved existing work. Baseline: 16 passed, 1 skipped. Verified official provider contracts. Gitignored mode-0600 `.env.private-access` retains its secret; main Auth Base URL/project ID and database URLs saved. Live JWKS returned keys and anonymous session returned null. Pooled and direct database connections passed read-only checks over client TLS. User reports only Magic Link enabled, registration off, expiry 5 minutes; change to planned 15 minutes. Main branch ID remains pending. |
+| 2. Email delivery | Handler implemented; Gmail credential pending | Real Ed25519 signature fixtures verify raw body + bound timestamp, approved recipients, URL/expiry checks, shared delivery receipts, cooldown and duplicate prevention. User initially answered "Neither" for SMTP/domain, then confirmed Gmail App passwords availability. Gmail TLS connection and sender fields are prepared locally. App password and live email delivery remain pending; no email sent. |
 | 3. Login prototype | Isolated tests passed; live proof pending | Fixed upstream operations, callback redemption, provider-backed verified identity, host-only Secure/HttpOnly/Lax cookies, app seven-day session cap, logout and recovery implemented. Chromium/WebKit HTTPS mobile tests passed with a simulated provider, including another browser context. Actual provider cookie/session contract, expiry/reuse and inbox navigation need live proof. |
 | 4. App integration | Neon mode wired for prototype | Spanish email form and generic confirmation; per-request whitelist/session check; unauthorized writes/exports blocked before scheduling access; CSRF/origins/local return paths/no-store retained. Scheduling workflow tests run in local-password and simulated-Neon modes. Production config refuses password fallback. No cloud login cutover yet. |
-| 5. Vercel/data | Deployment preparation complete; preview pending | Python 3.12/FastAPI entrypoint, bundle exclusions, pooled TLS URL handling, direct migration URL and explicit Alembic 0003 prepared. Local tooling supports configuration check, read-only probe, migration, approved-user provisioning and serving without access logs. No live migrations/transfer/deployment. Protected-preview webhook reachability needs a supported scoped control or a separate minimal webhook-only deployment. |
+| 5. Vercel/data | Hosted preview startup verified; main database migrated | Published the reviewed app and manifest fix on `t-rivas/auth-login-flow`; nine preview-only settings uploaded after explicit destination approval. Rebuilt protected preview is READY. Hosted health/login, anonymous redirects/write denial, setup exclusion and unsigned webhook rejection passed using a temporary verification token, then revoked. Explicit main migrations and read-only verification confirm Alembic `0004`, expected tables/constraints and initial planning state. Public schema was initially empty; no scheduling data transferred. Auth-user provisioning, real login and Neon webhook reachability remain pending. GitHub main and production settings are unchanged. |
 | 6. Tests/release | Local verification passed; release pending | Latest Python 3.12 suite: 87 passed, 1 skipped (PostgreSQL row-lock integration). Python 3.14 suite previously passed 74 tests before concurrent tests were added. Existing Chromium scheduling smoke passed; Chromium and WebKit mobile HTTPS auth checks passed with simulated provider. Live sender/provider, PostgreSQL concurrency, real Safari/device, costs, data-transfer decision, protected preview and production authorization remain pending. |
 | 7. Mother's email | Waiting for address | Initial release can proceed with the owner's email |
 
@@ -281,6 +281,50 @@ payload to a local file, citing unapproved production credential copying and
 its broad blast radius. No production credentials were downloaded; continue
 with the manifest fix and scoped non-secret deployment checks. Credentials,
 migrations, sender, user provisioning and authenticated login remain pending.
+Published the manifest fix as `23604f3`; GitHub reports the Vercel check succeeded.
+Scoped inspect confirms preview `dpl_JDEAhhB6ZmfH9S4cnw9xtSexCu9V` is READY at
+`https://gestion-guardias-pty8ytvpb-7h146os-projects.vercel.app`. Anonymous `/`
+and `/login` redirect to `vercel.com/sso-api`, confirming platform protection;
+application startup/session/email checks remain pending. GitHub main is unchanged.
+On 2026-10-11 the user resumed and explicitly approved retrieving only
+`DATABASE_URL` and `DATABASE_URL_UNPOOLED` from this project's production settings
+into the private file, followed by a read-only database check. Do not retrieve
+other secret values or run migrations under this narrower approval. Retrieve
+these values individually by environment ID and validate the selected Neon
+endpoint/database/TLS before storing or connecting.
+
+Vercel's sensitive-variable API returned no readable values for those two URLs.
+The user then supplied the pooled URL; stored it privately and derived the direct
+hostname using Neon's documented `-pooler` convention. Both connections passed
+read-only checks with client TLS. Under the original requested main setup,
+explicit migrations completed on 2026-10-11. Read-only verification confirms
+Alembic revision `0004`, the expected public tables, role-availability constraints,
+and initial planning state `(1, 0)`. The public schema was empty beforehand; no
+scheduling transfer occurred. The approved email has no Auth user yet.
+Prepared nine app settings for only the `t-rivas/auth-login-flow` Vercel preview
+branch. Automatic approval review rejected uploading the database/session secret
+payload without explicit approval of that destination. No settings were uploaded;
+the preview-only approval question is pending. Production configuration is unchanged.
+Gmail app-password availability is also awaiting the user's answer.
+The prepared preview payload passes a local startup smoke against main's database:
+`/health` and `/login` return 200, anonymous app pages return 303, and `/setup`
+returns 404. No email was sent and hosted authenticated sessions remain unverified.
+
+The user then explicitly approved the exact preview settings destination and
+authorized necessary implementation only within this Vercel project and its
+existing Git repository. Uploaded all nine settings individually; metadata
+confirms the feature-branch preview target and sensitive database/session fields.
+Rebuilt `23604f3` as `dpl_96bjS12FcNG5Vu8nhxQHsBRvbG6B`, READY at
+`https://gestion-guardias-43jp5wsp1-7h146os-projects.vercel.app`, retaining the stable
+feature-branch alias as app origin. Hosted startup and denial checks passed:
+health/login 200, anonymous pages 303, setup 404, anonymous write 401 and unsigned
+webhook 400. Created a temporary verification-only platform token for these
+checks and revoked that exact token immediately afterward. Platform protection
+remains enabled; Neon webhook reachability and real authenticated login are
+still pending. Production settings and GitHub main are unchanged.
+The user confirmed Gmail App passwords availability. Prepared Gmail connection
+and sender fields locally and requested secret entry of the app password into
+the private environment file. No email has been sent.
 
 Browser verification caught and corrected a real form-origin regression:
 `Referrer-Policy: no-referrer` caused browsers to post `Origin: null`. Normal pages
